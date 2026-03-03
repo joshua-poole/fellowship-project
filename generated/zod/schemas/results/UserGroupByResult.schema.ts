@@ -15,9 +15,10 @@ export const UserGroupByResultSchema = z.array(z.object({
     image: z.number(),
     createdAt: z.number(),
     updatedAt: z.number(),
+    bases: z.number(),
+    tables: z.number(),
     sessions: z.number(),
-    accounts: z.number(),
-    posts: z.number()
+    accounts: z.number()
   }).optional(),
   _min: z.object({
     id: z.string().nullable(),

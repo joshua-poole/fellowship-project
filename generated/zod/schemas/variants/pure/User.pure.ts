@@ -8,9 +8,10 @@ export const UserModelSchema = z.object({
     image: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date(),
+    bases: z.array(z.unknown()),
+    tables: z.array(z.unknown()),
     sessions: z.array(z.unknown()),
-    accounts: z.array(z.unknown()),
-    posts: z.array(z.unknown())
+    accounts: z.array(z.unknown())
 }).strict();
 
 export type UserPureType = z.infer<typeof UserModelSchema>;

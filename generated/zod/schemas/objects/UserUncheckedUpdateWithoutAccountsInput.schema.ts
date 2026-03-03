@@ -4,8 +4,9 @@ import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperat
 import { BoolFieldUpdateOperationsInputObjectSchema as BoolFieldUpdateOperationsInputObjectSchema } from './BoolFieldUpdateOperationsInput.schema';
 import { NullableStringFieldUpdateOperationsInputObjectSchema as NullableStringFieldUpdateOperationsInputObjectSchema } from './NullableStringFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
-import { SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema as SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema } from './SessionUncheckedUpdateManyWithoutUserNestedInput.schema';
-import { PostUncheckedUpdateManyWithoutCreatedByNestedInputObjectSchema as PostUncheckedUpdateManyWithoutCreatedByNestedInputObjectSchema } from './PostUncheckedUpdateManyWithoutCreatedByNestedInput.schema'
+import { BaseUncheckedUpdateManyWithoutUserNestedInputObjectSchema as BaseUncheckedUpdateManyWithoutUserNestedInputObjectSchema } from './BaseUncheckedUpdateManyWithoutUserNestedInput.schema';
+import { TableUncheckedUpdateManyWithoutUserNestedInputObjectSchema as TableUncheckedUpdateManyWithoutUserNestedInputObjectSchema } from './TableUncheckedUpdateManyWithoutUserNestedInput.schema';
+import { SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema as SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema } from './SessionUncheckedUpdateManyWithoutUserNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -15,8 +16,9 @@ const makeSchema = () => z.object({
   image: z.union([z.string(), z.lazy(() => NullableStringFieldUpdateOperationsInputObjectSchema)]).optional().nullable(),
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
-  sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
-  posts: z.lazy(() => PostUncheckedUpdateManyWithoutCreatedByNestedInputObjectSchema).optional()
+  bases: z.lazy(() => BaseUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  tables: z.lazy(() => TableUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional(),
+  sessions: z.lazy(() => SessionUncheckedUpdateManyWithoutUserNestedInputObjectSchema).optional()
 }).strict();
 export const UserUncheckedUpdateWithoutAccountsInputObjectSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutAccountsInput> = makeSchema() as unknown as z.ZodType<Prisma.UserUncheckedUpdateWithoutAccountsInput>;
 export const UserUncheckedUpdateWithoutAccountsInputObjectZodSchema = makeSchema();
