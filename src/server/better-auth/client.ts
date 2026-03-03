@@ -8,9 +8,8 @@ export const signInWithGoogle = async () => {
   // TODO: change these to the correct callback URLs
   const data = await authClient.signIn.social({
     provider: "google",
-    callbackURL: "/dashboard",
-    errorCallbackURL: "/error",
-    newUserCallbackURL: "/welcome",
+    callbackURL: "/",
+    errorCallbackURL: "/login",
     disableRedirect: true,
   });
   return data;
