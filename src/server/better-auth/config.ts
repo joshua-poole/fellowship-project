@@ -5,17 +5,18 @@ import { env } from "~/env";
 import { db } from "~/server/db";
 
 export const auth = betterAuth({
+  baseURL: env.BETTER_AUTH_URL as string,
   database: prismaAdapter(db, {
-    provider: "postgresql", // or "sqlite" or "mysql"
+    provider: "postgresql",
   }),
   emailAndPassword: {
     enabled: true,
   },
   socialProviders: {
-    github: {
-      clientId: env.BETTER_AUTH_GITHUB_CLIENT_ID,
-      clientSecret: env.BETTER_AUTH_GITHUB_CLIENT_SECRET,
-      redirectURI: "http://localhost:3000/api/auth/callback/github",
+    google: {
+      clientId: env.BETTER_AUTH_GOOGLE_CLIENT_ID as string,
+      clientSecret: env.BETTER_AUTH_GOOGLE_CLIENT_SECRET as string,
+      redirectURI: env.BETTER_AUTH_URL as string + "/api/auth/callback/google",
     },
   },
 });
