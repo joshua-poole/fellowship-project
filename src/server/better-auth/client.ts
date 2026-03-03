@@ -5,14 +5,11 @@ export const authClient = createAuthClient();
 export type Session = typeof authClient.$Infer.Session;
 
 export const signInWithGoogle = async () => {
-  // TODO: change these to the correct callback URLs
-  const data = await authClient.signIn.social({
+  await authClient.signIn.social({
     provider: "google",
     callbackURL: "/",
     errorCallbackURL: "/login",
-    disableRedirect: true,
   });
-  return data;
 };
 
 export const signOut = async () => {
