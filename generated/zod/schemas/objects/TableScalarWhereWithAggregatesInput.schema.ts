@@ -11,8 +11,7 @@ const tablescalarwherewithaggregatesinputSchema = z.object({
   name: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   baseId: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional(),
-  userId: z.union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeWithAggregatesFilterObjectSchema), z.coerce.date()]).optional()
 }).strict();
 export const TableScalarWhereWithAggregatesInputObjectSchema: z.ZodType<Prisma.TableScalarWhereWithAggregatesInput> = tablescalarwherewithaggregatesinputSchema as unknown as z.ZodType<Prisma.TableScalarWhereWithAggregatesInput>;
 export const TableScalarWhereWithAggregatesInputObjectZodSchema = tablescalarwherewithaggregatesinputSchema;

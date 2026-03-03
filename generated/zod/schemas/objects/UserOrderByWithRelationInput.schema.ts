@@ -3,7 +3,6 @@ import type { Prisma } from '../../../prisma/client';
 import { SortOrderSchema } from '../enums/SortOrder.schema';
 import { SortOrderInputObjectSchema as SortOrderInputObjectSchema } from './SortOrderInput.schema';
 import { BaseOrderByRelationAggregateInputObjectSchema as BaseOrderByRelationAggregateInputObjectSchema } from './BaseOrderByRelationAggregateInput.schema';
-import { TableOrderByRelationAggregateInputObjectSchema as TableOrderByRelationAggregateInputObjectSchema } from './TableOrderByRelationAggregateInput.schema';
 import { SessionOrderByRelationAggregateInputObjectSchema as SessionOrderByRelationAggregateInputObjectSchema } from './SessionOrderByRelationAggregateInput.schema';
 import { AccountOrderByRelationAggregateInputObjectSchema as AccountOrderByRelationAggregateInputObjectSchema } from './AccountOrderByRelationAggregateInput.schema'
 
@@ -16,7 +15,6 @@ const makeSchema = () => z.object({
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   bases: z.lazy(() => BaseOrderByRelationAggregateInputObjectSchema).optional(),
-  tables: z.lazy(() => TableOrderByRelationAggregateInputObjectSchema).optional(),
   sessions: z.lazy(() => SessionOrderByRelationAggregateInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountOrderByRelationAggregateInputObjectSchema).optional()
 }).strict();

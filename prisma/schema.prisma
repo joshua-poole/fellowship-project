@@ -27,7 +27,6 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
   bases         Base[]
-  tables        Table[]
   sessions      Session[]
   accounts      Account[]
 
@@ -80,7 +79,7 @@ model Base {
 
   tables    Table[]
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -89,15 +88,13 @@ model Table {
   id        String   @id @default(cuid())
   name      String   @default("Table")
   baseId    String
-  base      Base     @relation(fields: [baseId], references: [id])
+  base      Base     @relation(fields: [baseId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
   columns Column[]
-  rows Row[]
+  rows    Row[]
+  views   View[]
 }
 
 enum ColumnType {
@@ -106,25 +103,37 @@ enum ColumnType {
 }
 
 model Column {
-  id String @id @default(cuid())
-  name String
-  type ColumnType
-  description String?
-  default String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String     @id @default(cuid())
+  name         String
+  type         ColumnType
+  order        Int
+  description  String?
+  defaultValue String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   tableId String
-  table Table @relation(fields: [tableId], references: [id])
+  table   Table  @relation(fields: [tableId], references: [id], onDelete: Cascade)
 }
 
 model Row {
-  id String @id @default(cuid())
+  id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   tableId String
-  table Table @relation(fields: [tableId], references: [id])
+  table   Table  @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
   values Json
+}
+
+model View {
+  id        String   @id @default(cuid())
+  name      String   @default("Grid view")
+  type      String   @default("grid")
+  config    Json?
+  tableId   String
+  table     Table    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

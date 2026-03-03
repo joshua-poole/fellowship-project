@@ -1,7 +1,6 @@
 import * as z from 'zod';
 import type { Prisma } from '../../../prisma/client';
 import { BaseCreateNestedManyWithoutUserInputObjectSchema as BaseCreateNestedManyWithoutUserInputObjectSchema } from './BaseCreateNestedManyWithoutUserInput.schema';
-import { TableCreateNestedManyWithoutUserInputObjectSchema as TableCreateNestedManyWithoutUserInputObjectSchema } from './TableCreateNestedManyWithoutUserInput.schema';
 import { AccountCreateNestedManyWithoutUserInputObjectSchema as AccountCreateNestedManyWithoutUserInputObjectSchema } from './AccountCreateNestedManyWithoutUserInput.schema'
 
 const makeSchema = () => z.object({
@@ -13,7 +12,6 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   bases: z.lazy(() => BaseCreateNestedManyWithoutUserInputObjectSchema).optional(),
-  tables: z.lazy(() => TableCreateNestedManyWithoutUserInputObjectSchema).optional(),
   accounts: z.lazy(() => AccountCreateNestedManyWithoutUserInputObjectSchema).optional()
 }).strict();
 export const UserCreateWithoutSessionsInputObjectSchema: z.ZodType<Prisma.UserCreateWithoutSessionsInput> = makeSchema() as unknown as z.ZodType<Prisma.UserCreateWithoutSessionsInput>;

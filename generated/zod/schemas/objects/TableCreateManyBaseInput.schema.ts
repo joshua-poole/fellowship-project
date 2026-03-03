@@ -6,8 +6,7 @@ const makeSchema = () => z.object({
   id: z.string().optional(),
   name: z.string().optional(),
   createdAt: z.coerce.date().optional(),
-  updatedAt: z.coerce.date().optional(),
-  userId: z.string()
+  updatedAt: z.coerce.date().optional()
 }).strict();
 export const TableCreateManyBaseInputObjectSchema: z.ZodType<Prisma.TableCreateManyBaseInput> = makeSchema() as unknown as z.ZodType<Prisma.TableCreateManyBaseInput>;
 export const TableCreateManyBaseInputObjectZodSchema = makeSchema();

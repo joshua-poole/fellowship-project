@@ -11,3 +11,4 @@ export { BaseResultSchema } from './Base.result';
 export { TableResultSchema } from './Table.result';
 export { ColumnResultSchema } from './Column.result';
 export { RowResultSchema } from './Row.result';
+export { ViewResultSchema } from './View.result';

@@ -9,7 +9,6 @@ export const UserResultSchema = z.object({
     createdAt: z.date(),
     updatedAt: z.date(),
     bases: z.array(z.unknown()),
-    tables: z.array(z.unknown()),
     sessions: z.array(z.unknown()),
     accounts: z.array(z.unknown())
 }).strict();

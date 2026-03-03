@@ -6,8 +6,7 @@ export const TableFindUniqueResultSchema = z.nullable(z.object({
   base: z.unknown(),
   createdAt: z.date(),
   updatedAt: z.date(),
-  userId: z.string(),
-  user: z.unknown(),
   columns: z.array(z.unknown()),
-  rows: z.array(z.unknown())
+  rows: z.array(z.unknown()),
+  views: z.array(z.unknown())
 }));

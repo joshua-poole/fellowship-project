@@ -3,8 +3,8 @@ import type { Prisma } from '../../../prisma/client';
 import { StringFieldUpdateOperationsInputObjectSchema as StringFieldUpdateOperationsInputObjectSchema } from './StringFieldUpdateOperationsInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema as DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
 import { BaseUpdateOneRequiredWithoutTablesNestedInputObjectSchema as BaseUpdateOneRequiredWithoutTablesNestedInputObjectSchema } from './BaseUpdateOneRequiredWithoutTablesNestedInput.schema';
-import { UserUpdateOneRequiredWithoutTablesNestedInputObjectSchema as UserUpdateOneRequiredWithoutTablesNestedInputObjectSchema } from './UserUpdateOneRequiredWithoutTablesNestedInput.schema';
-import { ColumnUpdateManyWithoutTableNestedInputObjectSchema as ColumnUpdateManyWithoutTableNestedInputObjectSchema } from './ColumnUpdateManyWithoutTableNestedInput.schema'
+import { ColumnUpdateManyWithoutTableNestedInputObjectSchema as ColumnUpdateManyWithoutTableNestedInputObjectSchema } from './ColumnUpdateManyWithoutTableNestedInput.schema';
+import { ViewUpdateManyWithoutTableNestedInputObjectSchema as ViewUpdateManyWithoutTableNestedInputObjectSchema } from './ViewUpdateManyWithoutTableNestedInput.schema'
 
 const makeSchema = () => z.object({
   id: z.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputObjectSchema)]).optional(),
@@ -12,8 +12,8 @@ const makeSchema = () => z.object({
   createdAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   updatedAt: z.union([z.coerce.date(), z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema)]).optional(),
   base: z.lazy(() => BaseUpdateOneRequiredWithoutTablesNestedInputObjectSchema).optional(),
-  user: z.lazy(() => UserUpdateOneRequiredWithoutTablesNestedInputObjectSchema).optional(),
-  columns: z.lazy(() => ColumnUpdateManyWithoutTableNestedInputObjectSchema).optional()
+  columns: z.lazy(() => ColumnUpdateManyWithoutTableNestedInputObjectSchema).optional(),
+  views: z.lazy(() => ViewUpdateManyWithoutTableNestedInputObjectSchema).optional()
 }).strict();
 export const TableUpdateWithoutRowsInputObjectSchema: z.ZodType<Prisma.TableUpdateWithoutRowsInput> = makeSchema() as unknown as z.ZodType<Prisma.TableUpdateWithoutRowsInput>;
 export const TableUpdateWithoutRowsInputObjectZodSchema = makeSchema();

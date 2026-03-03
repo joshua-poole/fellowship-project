@@ -20,16 +20,27 @@ export type ColumnModel = runtime.Types.Result.DefaultSelection<Prisma.$ColumnPa
 
 export type AggregateColumn = {
   _count: ColumnCountAggregateOutputType | null
+  _avg: ColumnAvgAggregateOutputType | null
+  _sum: ColumnSumAggregateOutputType | null
   _min: ColumnMinAggregateOutputType | null
   _max: ColumnMaxAggregateOutputType | null
+}
+
+export type ColumnAvgAggregateOutputType = {
+  order: number | null
+}
+
+export type ColumnSumAggregateOutputType = {
+  order: number | null
 }
 
 export type ColumnMinAggregateOutputType = {
   id: string | null
   name: string | null
   type: $Enums.ColumnType | null
+  order: number | null
   description: string | null
-  default: string | null
+  defaultValue: string | null
   createdAt: Date | null
   updatedAt: Date | null
   tableId: string | null
@@ -39,8 +50,9 @@ export type ColumnMaxAggregateOutputType = {
   id: string | null
   name: string | null
   type: $Enums.ColumnType | null
+  order: number | null
   description: string | null
-  default: string | null
+  defaultValue: string | null
   createdAt: Date | null
   updatedAt: Date | null
   tableId: string | null
@@ -50,8 +62,9 @@ export type ColumnCountAggregateOutputType = {
   id: number
   name: number
   type: number
+  order: number
   description: number
-  default: number
+  defaultValue: number
   createdAt: number
   updatedAt: number
   tableId: number
@@ -59,12 +72,21 @@ export type ColumnCountAggregateOutputType = {
 }
 
 
+export type ColumnAvgAggregateInputType = {
+  order?: true
+}
+
+export type ColumnSumAggregateInputType = {
+  order?: true
+}
+
 export type ColumnMinAggregateInputType = {
   id?: true
   name?: true
   type?: true
+  order?: true
   description?: true
-  default?: true
+  defaultValue?: true
   createdAt?: true
   updatedAt?: true
   tableId?: true
@@ -74,8 +96,9 @@ export type ColumnMaxAggregateInputType = {
   id?: true
   name?: true
   type?: true
+  order?: true
   description?: true
-  default?: true
+  defaultValue?: true
   createdAt?: true
   updatedAt?: true
   tableId?: true
@@ -85,8 +108,9 @@ export type ColumnCountAggregateInputType = {
   id?: true
   name?: true
   type?: true
+  order?: true
   description?: true
-  default?: true
+  defaultValue?: true
   createdAt?: true
   updatedAt?: true
   tableId?: true
@@ -131,6 +155,18 @@ export type ColumnAggregateArgs<ExtArgs extends runtime.Types.Extensions.Interna
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: ColumnAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: ColumnSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: ColumnMinAggregateInputType
@@ -161,6 +197,8 @@ export type ColumnGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   _count?: ColumnCountAggregateInputType | true
+  _avg?: ColumnAvgAggregateInputType
+  _sum?: ColumnSumAggregateInputType
   _min?: ColumnMinAggregateInputType
   _max?: ColumnMaxAggregateInputType
 }
@@ -169,12 +207,15 @@ export type ColumnGroupByOutputType = {
   id: string
   name: string
   type: $Enums.ColumnType
+  order: number
   description: string | null
-  default: string | null
+  defaultValue: string | null
   createdAt: Date
   updatedAt: Date
   tableId: string
   _count: ColumnCountAggregateOutputType | null
+  _avg: ColumnAvgAggregateOutputType | null
+  _sum: ColumnSumAggregateOutputType | null
   _min: ColumnMinAggregateOutputType | null
   _max: ColumnMaxAggregateOutputType | null
 }
@@ -201,8 +242,9 @@ export type ColumnWhereInput = {
   id?: Prisma.StringFilter<"Column"> | string
   name?: Prisma.StringFilter<"Column"> | string
   type?: Prisma.EnumColumnTypeFilter<"Column"> | $Enums.ColumnType
+  order?: Prisma.IntFilter<"Column"> | number
   description?: Prisma.StringNullableFilter<"Column"> | string | null
-  default?: Prisma.StringNullableFilter<"Column"> | string | null
+  defaultValue?: Prisma.StringNullableFilter<"Column"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Column"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Column"> | Date | string
   tableId?: Prisma.StringFilter<"Column"> | string
@@ -213,8 +255,9 @@ export type ColumnOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
+  order?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
-  default?: Prisma.SortOrderInput | Prisma.SortOrder
+  defaultValue?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tableId?: Prisma.SortOrder
@@ -228,8 +271,9 @@ export type ColumnWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.ColumnWhereInput | Prisma.ColumnWhereInput[]
   name?: Prisma.StringFilter<"Column"> | string
   type?: Prisma.EnumColumnTypeFilter<"Column"> | $Enums.ColumnType
+  order?: Prisma.IntFilter<"Column"> | number
   description?: Prisma.StringNullableFilter<"Column"> | string | null
-  default?: Prisma.StringNullableFilter<"Column"> | string | null
+  defaultValue?: Prisma.StringNullableFilter<"Column"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Column"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Column"> | Date | string
   tableId?: Prisma.StringFilter<"Column"> | string
@@ -240,14 +284,17 @@ export type ColumnOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
+  order?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
-  default?: Prisma.SortOrderInput | Prisma.SortOrder
+  defaultValue?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tableId?: Prisma.SortOrder
   _count?: Prisma.ColumnCountOrderByAggregateInput
+  _avg?: Prisma.ColumnAvgOrderByAggregateInput
   _max?: Prisma.ColumnMaxOrderByAggregateInput
   _min?: Prisma.ColumnMinOrderByAggregateInput
+  _sum?: Prisma.ColumnSumOrderByAggregateInput
 }
 
 export type ColumnScalarWhereWithAggregatesInput = {
@@ -257,8 +304,9 @@ export type ColumnScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Column"> | string
   name?: Prisma.StringWithAggregatesFilter<"Column"> | string
   type?: Prisma.EnumColumnTypeWithAggregatesFilter<"Column"> | $Enums.ColumnType
+  order?: Prisma.IntWithAggregatesFilter<"Column"> | number
   description?: Prisma.StringNullableWithAggregatesFilter<"Column"> | string | null
-  default?: Prisma.StringNullableWithAggregatesFilter<"Column"> | string | null
+  defaultValue?: Prisma.StringNullableWithAggregatesFilter<"Column"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Column"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Column"> | Date | string
   tableId?: Prisma.StringWithAggregatesFilter<"Column"> | string
@@ -268,8 +316,9 @@ export type ColumnCreateInput = {
   id?: string
   name: string
   type: $Enums.ColumnType
+  order: number
   description?: string | null
-  default?: string | null
+  defaultValue?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   table: Prisma.TableCreateNestedOneWithoutColumnsInput
@@ -279,8 +328,9 @@ export type ColumnUncheckedCreateInput = {
   id?: string
   name: string
   type: $Enums.ColumnType
+  order: number
   description?: string | null
-  default?: string | null
+  defaultValue?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   tableId: string
@@ -290,8 +340,9 @@ export type ColumnUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumColumnTypeFieldUpdateOperationsInput | $Enums.ColumnType
+  order?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  default?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   table?: Prisma.TableUpdateOneRequiredWithoutColumnsNestedInput
@@ -301,8 +352,9 @@ export type ColumnUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumColumnTypeFieldUpdateOperationsInput | $Enums.ColumnType
+  order?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  default?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tableId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -312,8 +364,9 @@ export type ColumnCreateManyInput = {
   id?: string
   name: string
   type: $Enums.ColumnType
+  order: number
   description?: string | null
-  default?: string | null
+  defaultValue?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   tableId: string
@@ -323,8 +376,9 @@ export type ColumnUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumColumnTypeFieldUpdateOperationsInput | $Enums.ColumnType
+  order?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  default?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -333,8 +387,9 @@ export type ColumnUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumColumnTypeFieldUpdateOperationsInput | $Enums.ColumnType
+  order?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  default?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tableId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -354,19 +409,25 @@ export type ColumnCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
+  order?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  default?: Prisma.SortOrder
+  defaultValue?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tableId?: Prisma.SortOrder
+}
+
+export type ColumnAvgOrderByAggregateInput = {
+  order?: Prisma.SortOrder
 }
 
 export type ColumnMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
+  order?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  default?: Prisma.SortOrder
+  defaultValue?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tableId?: Prisma.SortOrder
@@ -376,11 +437,16 @@ export type ColumnMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   type?: Prisma.SortOrder
+  order?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  default?: Prisma.SortOrder
+  defaultValue?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   tableId?: Prisma.SortOrder
+}
+
+export type ColumnSumOrderByAggregateInput = {
+  order?: Prisma.SortOrder
 }
 
 export type ColumnCreateNestedManyWithoutTableInput = {
@@ -429,12 +495,21 @@ export type EnumColumnTypeFieldUpdateOperationsInput = {
   set?: $Enums.ColumnType
 }
 
+export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type ColumnCreateWithoutTableInput = {
   id?: string
   name: string
   type: $Enums.ColumnType
+  order: number
   description?: string | null
-  default?: string | null
+  defaultValue?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -443,8 +518,9 @@ export type ColumnUncheckedCreateWithoutTableInput = {
   id?: string
   name: string
   type: $Enums.ColumnType
+  order: number
   description?: string | null
-  default?: string | null
+  defaultValue?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -482,8 +558,9 @@ export type ColumnScalarWhereInput = {
   id?: Prisma.StringFilter<"Column"> | string
   name?: Prisma.StringFilter<"Column"> | string
   type?: Prisma.EnumColumnTypeFilter<"Column"> | $Enums.ColumnType
+  order?: Prisma.IntFilter<"Column"> | number
   description?: Prisma.StringNullableFilter<"Column"> | string | null
-  default?: Prisma.StringNullableFilter<"Column"> | string | null
+  defaultValue?: Prisma.StringNullableFilter<"Column"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Column"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Column"> | Date | string
   tableId?: Prisma.StringFilter<"Column"> | string
@@ -493,8 +570,9 @@ export type ColumnCreateManyTableInput = {
   id?: string
   name: string
   type: $Enums.ColumnType
+  order: number
   description?: string | null
-  default?: string | null
+  defaultValue?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -503,8 +581,9 @@ export type ColumnUpdateWithoutTableInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumColumnTypeFieldUpdateOperationsInput | $Enums.ColumnType
+  order?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  default?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -513,8 +592,9 @@ export type ColumnUncheckedUpdateWithoutTableInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumColumnTypeFieldUpdateOperationsInput | $Enums.ColumnType
+  order?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  default?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -523,8 +603,9 @@ export type ColumnUncheckedUpdateManyWithoutTableInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.EnumColumnTypeFieldUpdateOperationsInput | $Enums.ColumnType
+  order?: Prisma.IntFieldUpdateOperationsInput | number
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  default?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  defaultValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -535,8 +616,9 @@ export type ColumnSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   id?: boolean
   name?: boolean
   type?: boolean
+  order?: boolean
   description?: boolean
-  default?: boolean
+  defaultValue?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   tableId?: boolean
@@ -547,8 +629,9 @@ export type ColumnSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   id?: boolean
   name?: boolean
   type?: boolean
+  order?: boolean
   description?: boolean
-  default?: boolean
+  defaultValue?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   tableId?: boolean
@@ -559,8 +642,9 @@ export type ColumnSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   id?: boolean
   name?: boolean
   type?: boolean
+  order?: boolean
   description?: boolean
-  default?: boolean
+  defaultValue?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   tableId?: boolean
@@ -571,14 +655,15 @@ export type ColumnSelectScalar = {
   id?: boolean
   name?: boolean
   type?: boolean
+  order?: boolean
   description?: boolean
-  default?: boolean
+  defaultValue?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   tableId?: boolean
 }
 
-export type ColumnOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "type" | "description" | "default" | "createdAt" | "updatedAt" | "tableId", ExtArgs["result"]["column"]>
+export type ColumnOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "type" | "order" | "description" | "defaultValue" | "createdAt" | "updatedAt" | "tableId", ExtArgs["result"]["column"]>
 export type ColumnInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   table?: boolean | Prisma.TableDefaultArgs<ExtArgs>
 }
@@ -598,8 +683,9 @@ export type $ColumnPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     id: string
     name: string
     type: $Enums.ColumnType
+    order: number
     description: string | null
-    default: string | null
+    defaultValue: string | null
     createdAt: Date
     updatedAt: Date
     tableId: string
@@ -1030,8 +1116,9 @@ export interface ColumnFieldRefs {
   readonly id: Prisma.FieldRef<"Column", 'String'>
   readonly name: Prisma.FieldRef<"Column", 'String'>
   readonly type: Prisma.FieldRef<"Column", 'ColumnType'>
+  readonly order: Prisma.FieldRef<"Column", 'Int'>
   readonly description: Prisma.FieldRef<"Column", 'String'>
-  readonly default: Prisma.FieldRef<"Column", 'String'>
+  readonly defaultValue: Prisma.FieldRef<"Column", 'String'>
   readonly createdAt: Prisma.FieldRef<"Column", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Column", 'DateTime'>
   readonly tableId: Prisma.FieldRef<"Column", 'String'>

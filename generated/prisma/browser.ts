@@ -57,3 +57,8 @@ export type Column = Prisma.ColumnModel
  * 
  */
 export type Row = Prisma.RowModel
+/**
+ * Model View
+ * 
+ */
+export type View = Prisma.ViewModel

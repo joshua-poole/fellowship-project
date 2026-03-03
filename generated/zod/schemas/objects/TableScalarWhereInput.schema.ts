@@ -11,8 +11,7 @@ const tablescalarwhereinputSchema = z.object({
   name: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   baseId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional(),
   createdAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional(),
-  userId: z.union([z.lazy(() => StringFilterObjectSchema), z.string()]).optional()
+  updatedAt: z.union([z.lazy(() => DateTimeFilterObjectSchema), z.coerce.date()]).optional()
 }).strict();
 export const TableScalarWhereInputObjectSchema: z.ZodType<Prisma.TableScalarWhereInput> = tablescalarwhereinputSchema as unknown as z.ZodType<Prisma.TableScalarWhereInput>;
 export const TableScalarWhereInputObjectZodSchema = tablescalarwhereinputSchema;

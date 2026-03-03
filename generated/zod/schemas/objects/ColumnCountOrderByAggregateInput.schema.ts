@@ -6,8 +6,9 @@ const makeSchema = () => z.object({
   id: SortOrderSchema.optional(),
   name: SortOrderSchema.optional(),
   type: SortOrderSchema.optional(),
+  order: SortOrderSchema.optional(),
   description: SortOrderSchema.optional(),
-  default: SortOrderSchema.optional(),
+  defaultValue: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
   tableId: SortOrderSchema.optional()

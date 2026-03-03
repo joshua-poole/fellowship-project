@@ -1,8 +1,8 @@
 import * as z from 'zod';
 import type { Prisma } from '../../../prisma/client';
 import { BaseCreateNestedOneWithoutTablesInputObjectSchema as BaseCreateNestedOneWithoutTablesInputObjectSchema } from './BaseCreateNestedOneWithoutTablesInput.schema';
-import { UserCreateNestedOneWithoutTablesInputObjectSchema as UserCreateNestedOneWithoutTablesInputObjectSchema } from './UserCreateNestedOneWithoutTablesInput.schema';
-import { RowCreateNestedManyWithoutTableInputObjectSchema as RowCreateNestedManyWithoutTableInputObjectSchema } from './RowCreateNestedManyWithoutTableInput.schema'
+import { RowCreateNestedManyWithoutTableInputObjectSchema as RowCreateNestedManyWithoutTableInputObjectSchema } from './RowCreateNestedManyWithoutTableInput.schema';
+import { ViewCreateNestedManyWithoutTableInputObjectSchema as ViewCreateNestedManyWithoutTableInputObjectSchema } from './ViewCreateNestedManyWithoutTableInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -10,8 +10,8 @@ const makeSchema = () => z.object({
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
   base: z.lazy(() => BaseCreateNestedOneWithoutTablesInputObjectSchema),
-  user: z.lazy(() => UserCreateNestedOneWithoutTablesInputObjectSchema),
-  rows: z.lazy(() => RowCreateNestedManyWithoutTableInputObjectSchema).optional()
+  rows: z.lazy(() => RowCreateNestedManyWithoutTableInputObjectSchema).optional(),
+  views: z.lazy(() => ViewCreateNestedManyWithoutTableInputObjectSchema).optional()
 }).strict();
 export const TableCreateWithoutColumnsInputObjectSchema: z.ZodType<Prisma.TableCreateWithoutColumnsInput> = makeSchema() as unknown as z.ZodType<Prisma.TableCreateWithoutColumnsInput>;
 export const TableCreateWithoutColumnsInputObjectZodSchema = makeSchema();

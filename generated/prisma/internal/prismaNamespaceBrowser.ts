@@ -58,7 +58,8 @@ export const ModelName = {
   Base: 'Base',
   Table: 'Table',
   Column: 'Column',
-  Row: 'Row'
+  Row: 'Row',
+  View: 'View'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -151,8 +152,7 @@ export const TableScalarFieldEnum = {
   name: 'name',
   baseId: 'baseId',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  userId: 'userId'
+  updatedAt: 'updatedAt'
 } as const
 
 export type TableScalarFieldEnum = (typeof TableScalarFieldEnum)[keyof typeof TableScalarFieldEnum]
@@ -162,8 +162,9 @@ export const ColumnScalarFieldEnum = {
   id: 'id',
   name: 'name',
   type: 'type',
+  order: 'order',
   description: 'description',
-  default: 'default',
+  defaultValue: 'defaultValue',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   tableId: 'tableId'
@@ -183,6 +184,19 @@ export const RowScalarFieldEnum = {
 export type RowScalarFieldEnum = (typeof RowScalarFieldEnum)[keyof typeof RowScalarFieldEnum]
 
 
+export const ViewScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  type: 'type',
+  config: 'config',
+  tableId: 'tableId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ViewScalarFieldEnum = (typeof ViewScalarFieldEnum)[keyof typeof ViewScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -196,6 +210,14 @@ export const JsonNullValueInput = {
 } as const
 
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const QueryMode = {

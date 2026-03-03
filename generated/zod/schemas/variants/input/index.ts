@@ -11,3 +11,4 @@ export { BaseInputSchema } from './Base.input';
 export { TableInputSchema } from './Table.input';
 export { ColumnInputSchema } from './Column.input';
 export { RowInputSchema } from './Row.input';
+export { ViewInputSchema } from './View.input';

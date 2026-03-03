@@ -7,8 +7,7 @@ const makeSchema = () => z.object({
   name: SortOrderSchema.optional(),
   baseId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
-  updatedAt: SortOrderSchema.optional(),
-  userId: SortOrderSchema.optional()
+  updatedAt: SortOrderSchema.optional()
 }).strict();
 export const TableMaxOrderByAggregateInputObjectSchema: z.ZodType<Prisma.TableMaxOrderByAggregateInput> = makeSchema() as unknown as z.ZodType<Prisma.TableMaxOrderByAggregateInput>;
 export const TableMaxOrderByAggregateInputObjectZodSchema = makeSchema();

@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { Prisma } from '../../../prisma/client';
-import { RowUncheckedCreateNestedManyWithoutTableInputObjectSchema as RowUncheckedCreateNestedManyWithoutTableInputObjectSchema } from './RowUncheckedCreateNestedManyWithoutTableInput.schema'
+import { RowUncheckedCreateNestedManyWithoutTableInputObjectSchema as RowUncheckedCreateNestedManyWithoutTableInputObjectSchema } from './RowUncheckedCreateNestedManyWithoutTableInput.schema';
+import { ViewUncheckedCreateNestedManyWithoutTableInputObjectSchema as ViewUncheckedCreateNestedManyWithoutTableInputObjectSchema } from './ViewUncheckedCreateNestedManyWithoutTableInput.schema'
 
 const makeSchema = () => z.object({
   id: z.string().optional(),
@@ -8,8 +9,8 @@ const makeSchema = () => z.object({
   baseId: z.string(),
   createdAt: z.coerce.date().optional(),
   updatedAt: z.coerce.date().optional(),
-  userId: z.string(),
-  rows: z.lazy(() => RowUncheckedCreateNestedManyWithoutTableInputObjectSchema).optional()
+  rows: z.lazy(() => RowUncheckedCreateNestedManyWithoutTableInputObjectSchema).optional(),
+  views: z.lazy(() => ViewUncheckedCreateNestedManyWithoutTableInputObjectSchema).optional()
 }).strict();
 export const TableUncheckedCreateWithoutColumnsInputObjectSchema: z.ZodType<Prisma.TableUncheckedCreateWithoutColumnsInput> = makeSchema() as unknown as z.ZodType<Prisma.TableUncheckedCreateWithoutColumnsInput>;
 export const TableUncheckedCreateWithoutColumnsInputObjectZodSchema = makeSchema();

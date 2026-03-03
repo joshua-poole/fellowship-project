@@ -16,10 +16,9 @@ export const TableFindManySelectSchema: z.ZodType<Prisma.TableSelect> = z.object
     base: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    userId: z.boolean().optional(),
-    user: z.boolean().optional(),
     columns: z.boolean().optional(),
     rows: z.boolean().optional(),
+    views: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict() as unknown as z.ZodType<Prisma.TableSelect>;
 
@@ -30,10 +29,9 @@ export const TableFindManySelectZodSchema = z.object({
     base: z.boolean().optional(),
     createdAt: z.boolean().optional(),
     updatedAt: z.boolean().optional(),
-    userId: z.boolean().optional(),
-    user: z.boolean().optional(),
     columns: z.boolean().optional(),
     rows: z.boolean().optional(),
+    views: z.boolean().optional(),
     _count: z.boolean().optional()
   }).strict();
 

@@ -11,7 +11,6 @@ const makeSchema = () => z.object({
   baseId: SortOrderSchema.optional(),
   createdAt: SortOrderSchema.optional(),
   updatedAt: SortOrderSchema.optional(),
-  userId: SortOrderSchema.optional(),
   _count: z.lazy(() => TableCountOrderByAggregateInputObjectSchema).optional(),
   _max: z.lazy(() => TableMaxOrderByAggregateInputObjectSchema).optional(),
   _min: z.lazy(() => TableMinOrderByAggregateInputObjectSchema).optional()
