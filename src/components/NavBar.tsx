@@ -4,7 +4,7 @@ import Link from "next/link";
 import { authClient, signOut } from "~/server/better-auth/client";
 import { useRouter } from "next/navigation";
 import { Logo } from "./Logo";
-import { Bell, CircleQuestionMark, Menu } from "lucide-react";
+import { Bell, CircleQuestionMark, Menu, Book, Globe, MessageSquare, Mail, Laptop, Play, Gift, CircleStar, Code } from "lucide-react";
 import Search from "./ui/search";
 import {
   DropdownMenu,
@@ -15,16 +15,16 @@ import {
 } from "~/components/ui/dropdown-menu";
 
 const AVATAR_COLORS = [
-  "bg-teal-500",
-  "bg-rose-500",
-  "bg-violet-500",
-  "bg-sky-500",
-  "bg-amber-500",
-  "bg-emerald-500",
-  "bg-indigo-500",
-  "bg-pink-500",
-  "bg-cyan-500",
-  "bg-orange-500",
+  "bg-teal-300",
+  "bg-rose-300",
+  "bg-violet-300",
+  "bg-sky-300",
+  "bg-amber-300",
+  "bg-emerald-300",
+  "bg-indigo-300",
+  "bg-pink-300",
+  "bg-cyan-300",
+  "bg-orange-300",
 ];
 
 function getAvatarColor(userId: string) {
@@ -65,11 +65,18 @@ export function NavBar() {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem className="cursor-pointer">Help center</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">Keyboard shortcuts</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">What&apos;s new</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">Contact support</DropdownMenuItem>
+          <DropdownMenuItem className="text-xs text-gray-400">Support</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Book/> Help center</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Globe/> Ask the community</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><MessageSquare/> Message support</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Mail/> Contact sales</DropdownMenuItem>
+            <DropdownMenuItem className="text-xs text-gray-400">Education</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Laptop/> Keyboard shortcuts</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Play/> Webinars</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Gift/> Whats&apos;s new</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Code/> API documentation</DropdownMenuItem>
+            <DropdownMenuItem className="text-xs text-gray-400">Upgrade</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><CircleStar/> Plans and pricing</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <DropdownMenu>
