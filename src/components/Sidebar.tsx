@@ -14,11 +14,9 @@ import { Separator } from "~/components/ui/separator";
 
 function SidebarItem({ icon: Icon, strokeWidth = 1.5, className = "h-4 w-4" }: { icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; strokeWidth?: number; className?: string }) {
   return (
-
-        <div className="flex items-center justify-center rounded-md p-2 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => {console.log("create")}}>
-          <Icon className={`${className} text-gray-600`} strokeWidth={strokeWidth} />
-        </div>
-
+    <div className="flex items-center justify-center rounded-md p-2 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => {console.log("create")}}>
+      <Icon className={`${className} text-gray-600`} strokeWidth={strokeWidth} />
+    </div>
   );
 }
 

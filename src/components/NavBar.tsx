@@ -4,7 +4,7 @@ import Link from "next/link";
 import { authClient, signOut } from "~/server/better-auth/client";
 import { useRouter } from "next/navigation";
 import { Logo } from "./Logo";
-import { Bell, CircleQuestionMark, Menu, Book, Globe, MessageSquare, Mail, Laptop, Play, Gift, CircleStar, Code } from "lucide-react";
+import { Bell, CircleQuestionMark, Menu, Book, Globe, MessageSquare, Mail, Laptop, Play, Gift, CircleStar, Code, User, Users, Languages, Palette, LinkIcon, Wrench, Trash2, LogOut } from "lucide-react";
 import Search from "./ui/search";
 import {
   DropdownMenu,
@@ -97,15 +97,27 @@ export function NavBar() {
               <span className="text-sm font-medium text-black">{session?.user?.name?.charAt(0).toUpperCase()}</span>
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="min-w-76 p-5">
             <div className="px-2 py-1.5">
               <p className="text-sm font-medium">{session?.user?.name}</p>
               <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
             </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-              Sign out
-            </DropdownMenuItem>
+            <DropdownMenuSeparator className="my-3"/>
+            <DropdownMenuItem className="cursor-pointer"><User/>Account</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Users/>Manage groups</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Bell/>Notification preferences</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Languages/>Language preferences</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Palette/>Appearance</DropdownMenuItem>
+            <DropdownMenuSeparator className="my-3"/>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Mail/>Contact sales</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><CircleStar/>Upgrade</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Mail/>Tell a friend</DropdownMenuItem>
+            <DropdownMenuSeparator className="my-3"/>
+            <DropdownMenuItem className="cursor-pointer text-sm"><LinkIcon/>Integrations</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Wrench/>Builder hub</DropdownMenuItem>
+            <DropdownMenuSeparator className="my-3"/>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Trash2/>Trash</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm" onClick={handleSignOut}><LogOut/>Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
