@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { authClient } from "~/server/better-auth/client";
 import { NavBar } from "~/components/NavBar";
+import { Dashboard }  from "~/components/Dashboard";
 
 export default function Home() {
   const { data: session, isPending } = authClient.useSession();
@@ -29,10 +30,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen text-black">
-      <header>
-        <NavBar />
-      </header>
-      {/* Dashboard content */}
+      <NavBar />
+      <Dashboard />
     </main>
   );
 }

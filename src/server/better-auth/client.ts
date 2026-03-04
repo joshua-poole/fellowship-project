@@ -13,11 +13,9 @@ export const signInWithGoogle = async () => {
 };
 
 export const signOut = async () => {
-  const data = await authClient.signOut();
-  return data;
+  await authClient.signOut();
 };
 
 export const getSession = async () => {
-  const data = await authClient.getSession();
-  return data;
+  await authClient.getSession();
 };

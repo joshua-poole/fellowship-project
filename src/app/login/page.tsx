@@ -25,7 +25,7 @@ export default function Login() {
 
                 <span className="flex items-center justify-center my-6 text-[--colors-foreground-subtle] ">or</span>
                 <Button variant="outline" className="w-full h-10 cursor-pointer hover:bg-white"><span>Sign in with <b>Single Sign On</b></span></Button>
-                <Button variant="outline" className="w-full h-10 cursor-pointer hover:bg-white" onClick={() => signInWithGoogle()}>
+                <Button variant="outline" className="w-full h-10 cursor-pointer hover:bg-white" onClick={signInWithGoogle}>
                     <GoogleIcon />
                     <span>Continue with <b>Google</b></span>
                 </Button>
