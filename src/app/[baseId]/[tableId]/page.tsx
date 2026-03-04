@@ -1,14 +1,14 @@
-export default async function TablePage({
+"use client";
+
+import { use } from "react";
+import { TableView } from "~/components/TableView";
+
+export default function TablePage({
   params,
 }: {
   params: Promise<{ baseId: string; tableId: string }>;
 }) {
-  const { baseId, tableId } = await params;
+  const { baseId, tableId } = use(params);
 
-  return (
-    <div>
-      <p>Base: {baseId}</p>
-      <p>Table: {tableId}</p>
-    </div>
-  );
+  return <TableView baseId={baseId} tableId={tableId} />;
 }

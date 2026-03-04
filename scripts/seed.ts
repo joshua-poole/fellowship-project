@@ -1,7 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
 import { faker } from "@faker-js/faker";
-import { createId } from "@paralleldrive/cuid2";
+import { baseId, tableId, columnId, rowId, viewId } from "../src/lib/ids";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error("DATABASE_URL is required");
@@ -10,27 +10,20 @@ const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: DATABASE_URL }),
 });
 
-const SEED_USER_ID = "seed-user-01";
+const SEED_USER_ID = "odi6Og2ubUlmyvTRw095SKNTxbxXXTQY";
 const NUM_ROWS = 100;
 
 async function main() {
   console.log("Seeding database...");
 
-  // Create a seed user (Better Auth manages real users, this is just for seed data)
-  const user = await db.user.upsert({
+  const user = await db.user.findUniqueOrThrow({
     where: { id: SEED_USER_ID },
-    update: {},
-    create: {
-      id: SEED_USER_ID,
-      name: "Seed User",
-      email: "seed@example.com",
-      emailVerified: true,
-    },
   });
 
   // Create a base
   const base = await db.base.create({
     data: {
+      id: baseId(),
       name: "Employee Directory",
       userId: user.id,
     },
@@ -39,6 +32,7 @@ async function main() {
   // --- Table 1: People ---
   const peopleTable = await db.table.create({
     data: {
+      id: tableId(),
       name: "People",
       order: 0,
       baseId: base.id,
@@ -48,6 +42,7 @@ async function main() {
   const peopleColumns = await Promise.all([
     db.column.create({
       data: {
+        id: columnId(),
         name: "Full Name",
         type: "TEXT",
         order: 0,
@@ -56,6 +51,7 @@ async function main() {
     }),
     db.column.create({
       data: {
+        id: columnId(),
         name: "Email",
         type: "TEXT",
         order: 1,
@@ -64,6 +60,7 @@ async function main() {
     }),
     db.column.create({
       data: {
+        id: columnId(),
         name: "Department",
         type: "TEXT",
         order: 2,
@@ -72,6 +69,7 @@ async function main() {
     }),
     db.column.create({
       data: {
+        id: columnId(),
         name: "Salary",
         type: "NUMBER",
         order: 3,
@@ -80,6 +78,7 @@ async function main() {
     }),
     db.column.create({
       data: {
+        id: columnId(),
         name: "Phone",
         type: "TEXT",
         order: 4,
@@ -89,7 +88,7 @@ async function main() {
   ]);
 
   const peopleRows = Array.from({ length: NUM_ROWS }, (_, i) => ({
-    id: createId(),
+    id: rowId(),
     order: i,
     tableId: peopleTable.id,
     values: {
@@ -113,6 +112,7 @@ async function main() {
 
   await db.view.create({
     data: {
+      id: viewId(),
       name: "Grid view",
       type: "grid",
       order: 0,
@@ -127,6 +127,7 @@ async function main() {
   // --- Table 2: Projects ---
   const projectsTable = await db.table.create({
     data: {
+      id: tableId(),
       name: "Projects",
       order: 1,
       baseId: base.id,
@@ -136,6 +137,7 @@ async function main() {
   const projectColumns = await Promise.all([
     db.column.create({
       data: {
+        id: columnId(),
         name: "Project Name",
         type: "TEXT",
         order: 0,
@@ -144,6 +146,7 @@ async function main() {
     }),
     db.column.create({
       data: {
+        id: columnId(),
         name: "Description",
         type: "TEXT",
         order: 1,
@@ -152,6 +155,7 @@ async function main() {
     }),
     db.column.create({
       data: {
+        id: columnId(),
         name: "Status",
         type: "TEXT",
         order: 2,
@@ -160,6 +164,7 @@ async function main() {
     }),
     db.column.create({
       data: {
+        id: columnId(),
         name: "Budget",
         type: "NUMBER",
         order: 3,
@@ -169,7 +174,7 @@ async function main() {
   ]);
 
   const projectRows = Array.from({ length: 50 }, (_, i) => ({
-    id: createId(),
+    id: rowId(),
     order: i,
     tableId: projectsTable.id,
     values: {
@@ -189,6 +194,7 @@ async function main() {
 
   await db.view.create({
     data: {
+      id: viewId(),
       name: "Grid view",
       type: "grid",
       order: 0,

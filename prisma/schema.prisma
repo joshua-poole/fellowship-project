@@ -75,7 +75,7 @@ model Verification {
 }
 
 model Base {
-  id   String @id @default(cuid())
+  id   String @id
   name String @default("Untitled Base")
 
   tables    Table[]
@@ -90,7 +90,7 @@ model Base {
 }
 
 model Table {
-  id        String   @id @default(cuid())
+  id        String   @id
   name      String   @default("Table")
   order     Int      @default(0)
   baseId    String
@@ -111,7 +111,7 @@ enum ColumnType {
 }
 
 model Column {
-  id           String     @id @default(cuid())
+  id           String     @id
   name         String
   type         ColumnType
   order        Int
@@ -127,7 +127,7 @@ model Column {
 }
 
 model Row {
-  id        String   @id @default(cuid())
+  id        String   @id
   order     Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -142,15 +142,50 @@ model Row {
 }
 
 model View {
-  id        String   @id @default(cuid())
+  id        String   @id
   name      String   @default("Grid view")
   type      String   @default("grid")
   order     Int      @default(0)
-  config    Json?
+  search    String?
   tableId   String
   table     Table    @relation(fields: [tableId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  filters       ViewFilter[]
+  sorts         ViewSort[]
+  hiddenColumns ViewHiddenColumn[]
+
   @@index([tableId, order])
+}
+
+model ViewFilter {
+  id       String  @id
+  viewId   String
+  view     View    @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  columnId String
+  operator String
+  value    String?
+
+  @@index([viewId])
+}
+
+model ViewSort {
+  id        String @id
+  viewId    String
+  view      View   @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  columnId  String
+  direction String
+  order     Int    @default(0)
+
+  @@index([viewId])
+}
+
+model ViewHiddenColumn {
+  id       String @id
+  viewId   String
+  view     View   @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  columnId String
+
+  @@unique([viewId, columnId])
 }
