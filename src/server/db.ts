@@ -7,8 +7,7 @@ const createPrismaClient = () =>
     adapter: new PrismaPg({
       connectionString: env.DATABASE_URL,
     }),
-    log:
-      env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    log: ["error"],
   });
 
 const globalForPrisma = globalThis as unknown as {

@@ -84,6 +84,8 @@ model Base {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  lastOpenedAt DateTime @default(now())
+
   @@index([userId])
 }
 

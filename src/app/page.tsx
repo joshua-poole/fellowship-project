@@ -1,14 +1,38 @@
-import { HydrateClient } from "~/trpc/server";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { authClient } from "~/server/better-auth/client";
 import { NavBar } from "~/app/_components/NavBar";
 
-export default async function Home() {
+export default function Home() {
+  const { data: session, isPending } = authClient.useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace("/login");
+    }
+  }, [isPending, session, router]);
+
+  if (isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return null;
+  }
+
   return (
-    <HydrateClient>
-      <main className="min-h-screen text-black">
-        <header>
-          <NavBar />
-        </header>
-      </main>
-    </HydrateClient>
+    <main className="min-h-screen text-black">
+      <header>
+        <NavBar />
+      </header>
+      {/* Dashboard content */}
+    </main>
   );
 }
