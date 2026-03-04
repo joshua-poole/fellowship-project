@@ -5,7 +5,7 @@ import { Button } from "~/components/ui/button";
 import { authClient, signOut } from "~/server/better-auth/client";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Logo } from "./logo";
+import { Logo } from "./Logo";
 
 export function NavBar() {
   const { data: session } = authClient.useSession();

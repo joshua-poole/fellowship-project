@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { authClient } from "~/server/better-auth/client";
-import { NavBar } from "~/app/_components/NavBar";
+import { NavBar } from "~/components/NavBar";
 
 export default function Home() {
   const { data: session, isPending } = authClient.useSession();
