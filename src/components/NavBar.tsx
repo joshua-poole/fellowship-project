@@ -45,9 +45,9 @@ export function NavBar() {
   };
 
   return (
-    <nav className="flex items-center justify-between px-6 py-2 fixed top-0 left-0 right-0 z-50 bg-white h-12 border-b border-gray-200">
+    <nav className="flex items-center justify-between p-3 fixed top-0 left-0 right-0 z-50 bg-white h-14 border-b border-gray-200 w-full">
       <div className="flex items-center gap-5 pr-6">
-        <Menu className="h-5 w-5 cursor-pointer" />
+        <Menu className="h-5 w-5 cursor-pointer color-gray-300" />
           <Link href="/">
             <Logo/>
           </Link>

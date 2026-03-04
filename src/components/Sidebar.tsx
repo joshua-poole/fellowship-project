@@ -22,8 +22,8 @@ function SidebarItem({ icon: Icon, strokeWidth = 1.5, className = "h-4 w-4" }: {
 
 export function Sidebar() {
   return (
-      <aside className="fixed left-0 top-12 bottom-0 z-40 flex w-12 flex-col items-center justify-between bg-white border-r border-gray-200 py-3">
-        <div className="flex flex-col items-center gap-1">
+      <aside className="fixed left-0 top-12 bottom-0 z-40 flex w-12 flex-col items-center justify-between bg-white border-r border-gray-200 pt-2">
+        <div className="flex flex-col items-center gap-1 mt-3">
           <SidebarItem icon={House} strokeWidth={1.75} className="h-5 w-5" />
           <SidebarItem icon={Star} strokeWidth={1.75} className="h-5 w-5" />
           <SidebarItem icon={Share2} strokeWidth={1.75} className="h-5 w-5" />
