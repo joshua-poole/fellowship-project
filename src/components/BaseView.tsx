@@ -120,7 +120,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
   return (
     <main className="h-screen w-screen flex">
       {/* ═══ Sidebar ═══ */}
-      <aside className="flex shrink-0 flex-col items-center justify-between bg-white border-r border-(--colors-border-default) py-2 px-2" style={{ width: 55 }}>
+      <aside className="flex shrink-0 flex-col items-center justify-between bg-white border-r border-(--colors-border-default) py-2 px-2" style={{ width: 56 }}>
         <div className="flex flex-col items-center gap-1">
           {/* Airtable logo / back button */}
           <div
@@ -218,33 +218,52 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         </div>
 
         {/* ─── Table Tabs Bar ─── */}
-        <div className="flex h-8 items-center justify-between border-b border-(--colors-border-default) bg-gray-50 px-2 shrink-0">
-          <div className="flex items-center gap-0.5">
-            {base.tables.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setActiveTableId(t.id)}
-                className={`px-3 py-1 text-xs rounded-t-sm transition-colors ${
-                  t.id === activeTableId
-                    ? "bg-white font-medium border-x border-t border-(--colors-border-default)"
-                    : "text-gray-500 hover:text-black hover:bg-gray-100"
-                }`}
-              >
-                {t.name}
-              </button>
-            ))}
+        <div className="relative flex items-center justify-between bg-[#f1f5ff] shrink-0 border-b border-(--colors-border-default)" style={{ height: 32 }}>
+          <div className="flex items-stretch h-full overflow-visible">
+            {base.tables.map((t) => {
+              const isActive = t.id === activeTableId;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTableId(t.id)}
+                  className={`relative flex items-center text-sm transition-colors first:-ml-px ${
+                    isActive
+                      ? "bg-white font-medium rounded-tr-sm border-x border-t border-(--colors-border-default) -mt-px z-10"
+                      : "text-gray-500 hover:text-black"
+                  }`}
+                  style={{ paddingLeft: 12, paddingRight: isActive ? 32 : 12, ...(isActive ? { marginBottom: -1, paddingBottom: 1 } : {}) }}
+                >
+                  {t.name}
+                  {isActive && (
+                    <div className="absolute top-0 bottom-0 flex items-center" style={{ right: 12 }}>
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
             <button
-              className="px-1.5 py-1 text-gray-400 hover:text-black hover:bg-gray-100 rounded-sm transition-colors"
+              className="flex items-center gap-1 px-1.5 transition-colors"
               onClick={() => createTable.mutate({ baseId })}
               disabled={createTable.isPending}
+              style={{ height: 32 }}
             >
-              <Plus className="h-3.5 w-3.5" />
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            </button>
+            <button
+              className="flex items-center gap-1 px-1.5 transition-colors"
+              onClick={() => createTable.mutate({ baseId })}
+              disabled={createTable.isPending}
+              style={{ height: 32 }}
+            >
+              <Plus className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-500 ml-1">Add or import</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-1">
-            <button className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded-sm">
-              <Wrench className="h-3 w-3" /> Tools <ChevronDown className="h-3 w-3" />
+          <div className="flex items-center">
+            <button className="flex items-center gap-1 px-1.5 text-sm text-gray-500" style={{ height: 32 }}>
+              Tools <ChevronDown className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -277,13 +296,13 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         {/* ─── Views Sidebar + Grid ─── */}
         <div className="flex flex-1 min-h-0">
           {/* Views Sidebar */}
-          <div className="w-44 shrink-0 border-r border-(--colors-border-default) bg-gray-50 flex flex-col">
-            <div className="p-2">
+          <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-2 py-2.5" style={{ width: 280 }}>
+            <div className="pb-2">
               <Button size="xs" className="w-full justify-start gap-1.5 text-xs">
                 <Plus className="h-3 w-3" /> Create...
               </Button>
             </div>
-            <div className="px-2 pb-2">
+            <div className="pb-2">
               <div className="flex items-center gap-1 rounded-sm border border-(--colors-border-default) bg-white px-2 py-1">
                 <Search className="h-3 w-3 text-gray-400" />
                 <input
@@ -294,7 +313,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
                 <Settings className="h-3 w-3 text-gray-400 cursor-pointer" />
               </div>
             </div>
-            <div className="flex-1 overflow-auto px-1">
+            <div className="flex-1 overflow-auto">
               {tableData?.views?.map((v) => (
                 <div
                   key={v.id}
