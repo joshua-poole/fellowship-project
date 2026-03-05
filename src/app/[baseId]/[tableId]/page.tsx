@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { TableView } from "~/components/TableView";
+import { BaseView } from "~/components/BaseView";
 
 export default function TablePage({
   params,
@@ -10,5 +10,5 @@ export default function TablePage({
 }) {
   const { baseId, tableId } = use(params);
 
-  return <TableView baseId={baseId} tableId={tableId} />;
+  return <BaseView baseId={baseId} tableId={tableId} />;
 }
