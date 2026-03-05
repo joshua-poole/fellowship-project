@@ -1,15 +1,14 @@
-export default async function ViewPage({
+"use client";
+
+import { use } from "react";
+import { BaseView } from "~/components/BaseView";
+
+export default function ViewPage({
   params,
 }: {
   params: Promise<{ baseId: string; tableId: string; viewId: string }>;
 }) {
-  const { baseId, tableId, viewId } = await params;
+  const { baseId, tableId } = use(params);
 
-  return (
-    <div>
-      <p>Base: {baseId}</p>
-      <p>Table: {tableId}</p>
-      <p>View: {viewId}</p>
-    </div>
-  );
+  return <BaseView baseId={baseId} tableId={tableId} />;
 }

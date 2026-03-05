@@ -57,21 +57,24 @@ export const tableRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Base not found" });
       }
 
-      const tableCount = await ctx.db.table.count({
+      const existingTables = await ctx.db.table.findMany({
         where: { baseId: input.baseId },
+        select: { name: true, order: true },
+        orderBy: { order: "desc" },
       });
 
-      const last = await ctx.db.table.findFirst({
-        where: { baseId: input.baseId },
-        orderBy: { order: "desc" },
-        select: { order: true },
-      });
+      const highestNum = existingTables.reduce((max, t) => {
+        const match = t.name.match(/^Table (\d+)$/);
+        return match ? Math.max(max, parseInt(match[1]!, 10)) : max;
+      }, 0);
+
+      const lastOrder = existingTables[0]?.order ?? -1;
 
       const table = await ctx.db.table.create({
         data: {
           id: tableId(),
-          name: input.name ?? `Table ${tableCount + 1}`,
-          order: (last?.order ?? -1) + 1,
+          name: input.name ?? `Table ${highestNum + 1}`,
+          order: lastOrder + 1,
           baseId: input.baseId,
           columns: {
             create: [

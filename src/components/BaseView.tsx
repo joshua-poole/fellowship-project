@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { authClient, signOut } from "~/server/better-auth/client";
@@ -35,6 +35,14 @@ import {
   CircleStar,
   Trash2,
   LogOut,
+  Pencil,
+  SlidersHorizontal,
+  Copy,
+  GanttChart,
+  Info,
+  Lock,
+  X,
+  ArrowUpCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -75,25 +83,47 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
 
   const { data: base, isLoading: baseLoading } = api.base.getById.useQuery({ id: baseId });
 
-  const [activeTableId, setActiveTableId] = useState<string | undefined>(tableId);
+  const [activeTableId, setActiveTableIdState] = useState<string | undefined>(tableId);
   const [activeTab, setActiveTab] = useState("Data");
+
+  const setActiveTableId = useCallback((id: string | undefined) => {
+    setActiveTableIdState(id);
+  }, []);
 
   // Set initial active table when base loads
   useEffect(() => {
     if (!activeTableId && base?.tables?.[0]) {
       setActiveTableId(base.tables[0].id);
     }
-  }, [base, activeTableId]);
+  }, [base, activeTableId, setActiveTableId]);
 
   const { data: tableData } = api.table.getById.useQuery(
     { id: activeTableId! },
     { enabled: !!activeTableId },
   );
 
+  const activeView = tableData?.views?.[0];
+
+  // Update URL when active table/view changes (without triggering navigation)
+  useEffect(() => {
+    if (activeTableId && activeView) {
+      window.history.replaceState(null, "", `/${baseId}/${activeTableId}/${activeView.id}`);
+    } else if (activeTableId) {
+      window.history.replaceState(null, "", `/${baseId}/${activeTableId}`);
+    }
+  }, [activeTableId, activeView, baseId]);
+
   const utils = api.useUtils();
 
   const createTable = api.table.create.useMutation({
-    onSuccess: () => utils.base.getById.invalidate({ id: baseId }),
+    onSuccess: () => void utils.base.getById.invalidate({ id: baseId }),
+  });
+
+  const deleteTable = api.table.delete.useMutation({
+    onSuccess: () => {
+      void utils.base.getById.invalidate({ id: baseId });
+      setActiveTableId(undefined);
+    },
   });
 
   const columns = useMemo(() => tableData?.columns ?? [], [tableData?.columns]);
@@ -114,8 +144,6 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
       </div>
     );
   }
-
-  const activeView = tableData?.views?.[0];
 
   return (
     <main className="h-screen w-screen flex">
@@ -177,16 +205,16 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
       {/* ═══ Main Area ═══ */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* ─── Navbar ─── */}
-        <div className="flex items-center justify-between border-b border-(--colors-border-default) px-3 shrink-0" style={{ height: 56 }}>
+        <div className="flex items-center justify-between border-b border-(--colors-border-default) pl-4 shrink-0" style={{ height: 56 }}>
           <div className="flex items-center gap-2">
-            <div className={`flex h-8 w-8 items-center justify-center rounded-md ${hashColor(baseId, BASE_COLORS)} [&_path]:fill-white! border border-(--colors-border-default)`}>
-              <span className="[&_svg]:h-5 [&_svg]:w-5"><LogoIcon /></span>
+            <div className={`flex h-8 w-8 items-center justify-center rounded-[6px] ${hashColor(baseId, BASE_COLORS)} [&_path]:fill-white! border border-(--colors-border-default)`}>
+              <span className="[&_svg]:w-6 [&_svg]:h-[20.4px]"><LogoIcon /></span>
             </div>
-            <span className="text-sm font-semibold">{base.name}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+            <span className="truncate" style={{ lineHeight: "24px", fontWeight: 700, fontFamily: "var(--font-family-body)", fontSize: "var(--font-size-heading-small)", minWidth: 0, flex: "0 1 auto" }}>{base.name}</span>
+            <ChevronDown className="h-4 w-4 ml-1 text-gray-400" />
           </div>
 
-          <ul className="relative flex items-stretch justify-center gap-2 px-1 bg-(--colors-background-default)">
+          <ul className="relative flex items-stretch justify-center gap-4 px-2 bg-(--colors-background-default) self-stretch">
             {["Data", "Automations", "Interfaces", "Forms"].map((tab) => (
               <li key={tab}>
                 <a className="relative flex h-full items-center cursor-pointer" onClick={() => setActiveTab(tab)}>
@@ -202,56 +230,94 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
             ))}
           </ul>
 
-          <div className="flex items-center gap-2">
-            <SidebarIcon icon={History} />
-            <Button size="xs">
+          <div className="flex items-center gap-2 pr-4">
+            <div className="flex items-center justify-center w-7 h-7 rounded-full cursor-pointer hover:bg-gray-100 transition-colors">
+              <History className="h-4 w-4 text-gray-600" />
+            </div>
+            <Button variant="outline" className="border border-(--colors-border-default) h-7 px-2! flex-none gap-1 hover:bg-white">
               <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
                 <path fillRule="evenodd" d="M13.5 2.5c.546 0 1 .454 1 1v4a.5.5 0 0 1-1 0v-4H6v9h2.5a.5.5 0 0 1 0 1h-6c-.546 0-1-.454-1-1v-9c0-.546.454-1 1-1h11Zm-11 1v9H5v-9H2.5Z M11.124 8.67a.5.5 0 0 1 .653-.086l3 2a.5.5 0 0 1 0 .832l-3 2A.5.5 0 0 1 11 13V9a.5.5 0 0 1 .124-.33Z" />
               </svg>
               Launch
             </Button>
-            <Button size="xs" variant="outline" className="border border-(--colors-border-default)">
-              <LinkIcon className="h-3.5 w-3.5" />
+            <Button variant="outline" className="border border-(--colors-border-default) w-7 h-7 hover:bg-white">
+              <LinkIcon className="h-3.5! w-3.5! flex-none" />
             </Button>
-            <Button size="xs" className="px-3 text-white bg-[#3b66a3] hover:bg-[#325889]" style={{ height: 28 }}>Share</Button>
+            <Button className="h-7 px-3 text-white bg-[#3b66a3] hover:bg-[#3b66a3] border-0 rounded-[6px]">Share</Button>
           </div>
         </div>
 
         {/* ─── Table Tabs Bar ─── */}
         <div className="relative flex items-center justify-between bg-[#f1f5ff] shrink-0 border-b border-(--colors-border-default)" style={{ height: 32 }}>
           <div className="flex items-stretch h-full overflow-visible">
-            {base.tables.map((t) => {
+            {base.tables.map((t, index) => {
               const isActive = t.id === activeTableId;
+              const prevActive = index > 0 && base.tables[index - 1]?.id === activeTableId;
+              const showDividerBefore = index > 0 && !isActive && !prevActive;
               return (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTableId(t.id)}
-                  className={`relative flex items-center text-sm transition-colors first:-ml-px ${
-                    isActive
-                      ? "bg-white font-medium rounded-tr-sm border-x border-t border-(--colors-border-default) -mt-px z-10"
-                      : "text-gray-500 hover:text-black"
-                  }`}
-                  style={{ paddingLeft: 12, paddingRight: isActive ? 32 : 12, ...(isActive ? { marginBottom: -1, paddingBottom: 1 } : {}) }}
-                >
-                  {t.name}
-                  {isActive && (
-                    <div className="absolute top-0 bottom-0 flex items-center" style={{ right: 12 }}>
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                <Fragment key={t.id}>
+                  {showDividerBefore && (
+                    <div className="flex items-center self-center">
+                      <div style={{ height: 12, width: 1, backgroundColor: "rgba(0, 0, 0, 0.1)" }} />
                     </div>
                   )}
-                </button>
+                  {isActive ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className={`relative flex items-center text-sm transition-colors cursor-pointer bg-white font-medium rounded-tr-sm border-x border-t border-(--colors-border-default) -mt-px z-10`}
+                          style={{ paddingLeft: 12, paddingRight: 32, marginBottom: -1, paddingBottom: 1 }}
+                        >
+                          {t.name}
+                          <div className="absolute top-0 bottom-0 flex items-center" style={{ right: 12 }}>
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          </div>
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" side="bottom" sideOffset={8} className="p-3 w-83! h-108.5! max-h-108.5!">
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><ArrowUpCircle className="h-4 w-4 mr-2" />Import data<ChevronDown className="h-4 w-4 -rotate-90" /></DropdownMenuItem>
+                        <DropdownMenuSeparator className="m-2 opacity-50" />
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Pencil className="h-4 w-4 mr-2" />Rename table</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><EyeOff className="h-4 w-4 mr-2" />Hide table</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><SlidersHorizontal className="h-4 w-4 mr-2" />Manage fields</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Copy className="h-4 w-4 mr-2" />Duplicate table</DropdownMenuItem>
+                        <DropdownMenuSeparator className="m-2 opacity-50" />
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><GanttChart className="h-4 w-4 mr-2" />Configure date dependencies</DropdownMenuItem>
+                        <DropdownMenuSeparator className="m-2 opacity-50" />
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Info className="h-4 w-4 mr-2" />Edit table description</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Lock className="h-4 w-4 mr-2" />Edit table permissions</DropdownMenuItem>
+                        <DropdownMenuSeparator className="m-2 opacity-50" />
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><X className="h-4 w-4 mr-2" />Clear data</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0 text-red-600" onClick={() => deleteTable.mutate({ id: t.id })}><Trash2 className="h-4 w-4 mr-2" />Delete table</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <button
+                      onClick={() => setActiveTableId(t.id)}
+                      className="relative flex items-center text-sm transition-colors cursor-pointer text-gray-500 hover:text-black"
+                      style={{ paddingLeft: 12, paddingRight: 12 }}
+                    >
+                      {t.name}
+                    </button>
+                  )}
+                </Fragment>
               );
             })}
+            {/* Divider after last tab */}
+            {base.tables[base.tables.length - 1]?.id !== activeTableId && (
+              <div className="flex items-center self-center">
+                <div style={{ height: 12, width: 1, backgroundColor: "rgba(0, 0, 0, 0.1)" }} />
+              </div>
+            )}
             <button
-              className="flex items-center gap-1 px-1.5 transition-colors"
+              className="h-8 w-10 flex items-center gap-1 transition-colors px-3 cursor-pointer"
               onClick={() => createTable.mutate({ baseId })}
               disabled={createTable.isPending}
-              style={{ height: 32 }}
             >
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </button>
             <button
-              className="flex items-center gap-1 px-1.5 transition-colors"
+              className="flex items-center gap-1 px-1.5 transition-colors cursor-pointer"
               onClick={() => createTable.mutate({ baseId })}
               disabled={createTable.isPending}
               style={{ height: 32 }}
