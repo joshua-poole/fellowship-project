@@ -1,37 +1,42 @@
 "use client";
 
+import { useState } from "react";
 import { DashboardCard } from "./DashboardCard";
 import { OmniIcon } from "./dashboardIcons/Omni";
-import { Grid2x2Icon, Table, ArrowUp, Trash2 } from "lucide-react";
+import { Grid2x2Icon, Table, ArrowUp, ChevronDown, Menu, Grid2X2, Star, Ellipsis } from "lucide-react";
 import { api } from "~/trpc/react";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
+
+const BASE_COLORS = [
+  "bg-blue-600", "bg-emerald-600", "bg-purple-600", "bg-rose-600",
+  "bg-amber-600", "bg-cyan-600", "bg-indigo-600", "bg-pink-600",
+  "bg-teal-600", "bg-orange-600",
+];
+
+function baseColor(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return BASE_COLORS[Math.abs(hash) % BASE_COLORS.length];
+}
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
   if (seconds < 60) return "just now";
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
   const months = Math.floor(days / 30);
-  return `${months}mo ago`;
+  return `${months} month${months > 1 ? 's' : ''} ago`;
 }
 
 export function Dashboard() {
-  const { data: bases, isLoading, refetch } = api.base.getAll.useQuery();
-
-  const createBase = api.base.create.useMutation({
-    onSuccess: () => refetch(),
-  });
-
-  const deleteBase = api.base.delete.useMutation({
-    onSuccess: () => refetch(),
-  });
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const { data: bases, isLoading } = api.base.getAll.useQuery();
 
   return (
     <div className="mx-12 mt-8">
@@ -43,53 +48,94 @@ export function Dashboard() {
         <DashboardCard title="Build an app on your own" description="Start with a blank app and build your ideal workflow." icon={Table} color="blue"/>
       </div>
 
-      <div className="mt-10">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Recent bases</h2>
-          <Button
-            size="sm"
-            onClick={() => createBase.mutate({ name: "Untitled Base" })}
-            disabled={createBase.isPending}
-          >
-            + Create base
-          </Button>
+      <div className="mt-5">
+        <div className="flex items-center justify-between mb-4 text-gray-500">
+          <div className="flex flex-row cursor-pointer hover:text-black">
+            <p className="text-sm">Opened anytime</p>
+            <ChevronDown className="ml-1 h-4 w-4" strokeWidth={1.25}/>
+          </div>
+
+          <div className="flex flex-row gap-0">
+            <button
+              className={`p-1.5 rounded-full cursor-pointer transition-colors ${viewMode === "list" ? "bg-gray-200" : "hover:bg-gray-100"}`}
+              onClick={() => setViewMode("list")}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <button
+              className={`p-1.5 rounded-full cursor-pointer transition-colors ${viewMode === "grid" ? "bg-gray-200" : "hover:bg-gray-100"}`}
+              onClick={() => setViewMode("grid")}
+            >
+              <Grid2X2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-xl" />
-            ))}
+          <div>
+            <div className="grid grid-cols-[1.5fr_1fr_1fr] py-2">
+              <Skeleton className="h-3 w-10 rounded" />
+              <Skeleton className="h-3 w-20 rounded" />
+              <Skeleton className="h-3 w-18 rounded" />
+            </div>
+            <div className="border-t border-gray-200" />
+            <div className="mt-6 space-y-1">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="grid grid-cols-[1.5fr_1fr_1fr] items-center py-3 pl-2">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-6 w-6 shrink-0 rounded-md" />
+                    <Skeleton className="h-3 rounded" style={{ width: `${80 + i * 20}px` }} />
+                  </div>
+                  <Skeleton className="h-3 w-24 rounded" />
+                  <Skeleton className="h-3 w-16 rounded" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : bases && bases.length > 0 ? (
-          <div className="grid grid-cols-4 gap-4">
-            {bases.map((base) => (
-              <Link key={base.id} href={`/${base.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{base.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {timeAgo(new Date(base.lastOpenedAt))}
-                      </p>
+          <div>
+            <div className="grid grid-cols-[1.5fr_1fr_1fr] py-2 text-xs font-medium text-gray-600">
+              <span>Name</span>
+              <span>Last opened</span>
+              <span>Workspace</span>
+            </div>
+            <div className="border-t border-gray-200" />
+            <div className="mt-6">
+              {bases.map((base) => (
+                <Link key={base.id} href={`/${base.id}`}>
+                  <div className="group grid grid-cols-[1.5fr_1fr_1fr] items-center py-3 hover:bg-gray-200 cursor-pointer transition-colors rounded">
+                    <div className="flex items-center gap-3 pl-2">
+                      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${baseColor(base.id)} text-white text-[10px] font-semibold`}>
+                        {base.name.charAt(0).toUpperCase()}{base.name.charAt(1)?.toLowerCase() ?? ""}
+                      </div>
+                      <span className="text-sm font-normal truncate">{base.name}</span>
+                      <span className="text-xs text-gray-400 hidden group-hover:inline">Open data</span>
                     </div>
-                    <button
-                      className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        deleteBase.mutate({ id: base.id });
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                    <div className="relative flex items-center">
+                      <div className="absolute -left-14 items-center gap-0.5 hidden group-hover:flex">
+                        <button className="p-1 rounded hover:bg-gray-300 text-gray-400" onClick={(e) => e.preventDefault()}>
+                          <Star className="h-3.5 w-3.5" />
+                        </button>
+                        <button className="p-1 rounded hover:bg-gray-300 text-gray-400" onClick={(e) => e.preventDefault()}>
+                          <Ellipsis className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <span className="text-sm text-gray-500">Opened {timeAgo(new Date(base.lastOpenedAt))}</span>
+                    </div>
+                    <span className="text-sm text-gray-500"></span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         ) : (
-          <p className="text-muted-foreground">No bases yet — create one to get started</p>
+          <div className="flex justify-center text-center mt-45">
+            <div className="flex flex-col gap-2 justify-center items-center ">
+              <h2 className="text-xl">You haven&apos;t opened anything recently</h2>
+              <p className="text-muted-foreground text-xs">Apps that you have recently opened will appear here.</p>
+              <Button className="w-40 text-muted-foreground mt-5 text-xs"> Go to all workspaces</Button>
+            </div>
+          </div>
         )}
       </div>
     </div>

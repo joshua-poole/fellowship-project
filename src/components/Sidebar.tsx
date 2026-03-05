@@ -11,6 +11,8 @@ import {
   Plus,
 } from "lucide-react";
 import { Separator } from "~/components/ui/separator";
+import { api } from "~/trpc/react";
+import { Button } from "./ui/button";
 
 function SidebarItem({ icon: Icon, strokeWidth = 1.5, className = "h-4 w-4" }: { icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; strokeWidth?: number; className?: string }) {
   return (
@@ -21,6 +23,11 @@ function SidebarItem({ icon: Icon, strokeWidth = 1.5, className = "h-4 w-4" }: {
 }
 
 export function Sidebar() {
+  const utils = api.useUtils();
+  const createBase = api.base.create.useMutation({
+    onSuccess: () => utils.base.getAll.invalidate(),
+  });
+
   return (
       <aside className="fixed left-0 top-12 bottom-0 z-40 flex w-12 flex-col items-center justify-between bg-white border-r border-gray-200 pt-2">
         <div className="flex flex-col items-center gap-1 mt-3">
@@ -37,7 +44,9 @@ export function Sidebar() {
             <SidebarItem icon={BookOpen} strokeWidth={1.25} />
             <SidebarItem icon={ShoppingBag} strokeWidth={1.25} />
             <SidebarItem icon={Globe} strokeWidth={1.25} />
-            <SidebarItem icon={Plus} strokeWidth={1.25}/>
+            <Button className="cursor-pointer bg-white text-gray-500 hover:bg-gray-200 rounded-sm w-6 h-6 mt-2" onClick={() => createBase.mutate({ name: "Untitled Base" })}>
+              <Plus strokeWidth={1.25} />
+            </Button>
           </div>
         </div>
       </aside>
