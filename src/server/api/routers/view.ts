@@ -101,7 +101,6 @@ export const viewRouter = createTRPCRouter({
 
       const { id, filters, sorts, hiddenColumns, ...rest } = input;
 
-      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment -- Prisma adapter types unresolvable by ESLint */
 
       // Delete and recreate filters if provided
       if (filters !== undefined) {

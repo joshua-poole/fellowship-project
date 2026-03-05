@@ -64,7 +64,7 @@ export const tableRouter = createTRPCRouter({
       });
 
       const highestNum = existingTables.reduce((max, t) => {
-        const match = t.name.match(/^Table (\d+)$/);
+        const match = /^Table (\d+)$/.exec(t.name);
         return match ? Math.max(max, parseInt(match[1]!, 10)) : max;
       }, 0);
 
