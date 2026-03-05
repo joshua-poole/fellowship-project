@@ -13,7 +13,7 @@ export default function Signup() {
   return (
     <>
       <div className="w-full h-screen">
-        <div className="flex flex-col w-full justify-center max-w-[500px] mx-auto mt-12">
+        <div className="flex flex-col w-full justify-center max-w-125 mx-auto mt-12">
           <LogoIcon />
           <h1 className="text-2xl font-medium my-12">Welcome to Airtable</h1>
 

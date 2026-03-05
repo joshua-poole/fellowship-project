@@ -105,7 +105,8 @@ export const rowRouter = createTRPCRouter({
 
       let nextCursor: number | undefined;
       if (rows.length > input.limit) {
-        nextCursor = rows.pop()!.order;
+        rows.pop(); // remove the extra row used to detect next page
+        nextCursor = rows[rows.length - 1]!.order;
       }
 
       return {
@@ -168,28 +169,38 @@ export const rowRouter = createTRPCRouter({
       });
 
       const startOrder = (last?.order ?? -1) + 1;
-      const BATCH_SIZE = 1000;
-      let created = 0;
+      const BATCH_SIZE = 5000;
 
+      // Build all batches
+      const batches: Parameters<typeof ctx.db.row.createMany>[0][] = [];
       for (let i = 0; i < input.count; i += BATCH_SIZE) {
         const batchSize = Math.min(BATCH_SIZE, input.count - i);
-        const rows = Array.from({ length: batchSize }, (_, j) => ({
-          id: rowId(),
-          tableId: input.tableId,
-          order: startOrder + i + j,
-          values: Object.fromEntries(
-            table.columns.map((col) => [
-              col.id,
-              col.type === "NUMBER"
-                ? faker.number.int({ min: 0, max: 10000 })
-                : faker.lorem.words({ min: 1, max: 3 }),
-            ]),
-          ),
-        }));
+        const ids = new Set<string>();
+        while (ids.size < batchSize) ids.add(rowId());
 
-        const result = await ctx.db.row.createMany({ data: rows });
-        created += result.count;
+        batches.push({
+          data: [...ids].map((id, j) => ({
+            id,
+            tableId: input.tableId,
+            order: startOrder + i + j,
+            values: Object.fromEntries(
+              table.columns.map((col) => [
+                col.id,
+                col.type === "NUMBER"
+                  ? faker.number.int({ min: 0, max: 10000 })
+                  : faker.lorem.words({ min: 1, max: 3 }),
+              ]),
+            ),
+          })),
+          skipDuplicates: true,
+        });
       }
+
+      // Run all batches in parallel
+      const results = await Promise.all(
+        batches.map((batch) => ctx.db.row.createMany(batch)),
+      );
+      const created = results.reduce((sum, r) => sum + r.count, 0);
 
       return { count: created };
     }),

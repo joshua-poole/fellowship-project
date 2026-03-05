@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
-import { authClient } from "~/server/better-auth/client";
+import { authClient, signOut } from "~/server/better-auth/client";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Button } from "~/components/ui/button";
 import { OmniBaseView } from "./icons/OmniBaseView";
@@ -27,14 +27,23 @@ import {
   History,
   Wrench,
   Settings,
+  User,
+  Users,
+  Languages,
+  Palette,
+  Mail,
+  CircleStar,
+  Trash2,
+  LogOut,
 } from "lucide-react";
 import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-  createColumnHelper,
-  type ColumnDef,
-} from "@tanstack/react-table";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import { VirtualizedTable } from "./VirtualizedTable";
 
 /* ─── color helpers ─── */
 const BASE_COLORS = [
@@ -54,14 +63,15 @@ function hashColor(id: string, colors: string[]) {
   return colors[Math.abs(hash) % colors.length]!;
 }
 
-/* ─── types ─── */
-type RowData = { id: string; order: number; values: Record<string, string | number> };
-type ColDef = { id: string; name: string; type: string; order: number };
-
 /* ─── component ─── */
 export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string }) {
   const router = useRouter();
   const { data: session } = authClient.useSession();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+  };
 
   const { data: base, isLoading: baseLoading } = api.base.getById.useQuery({ id: baseId });
 
@@ -80,74 +90,13 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
     { enabled: !!activeTableId },
   );
 
-  const { data: rowData, refetch: refetchRows } = api.row.getByTable.useQuery(
-    { tableId: activeTableId!, limit: 500 },
-    { enabled: !!activeTableId },
-  );
-
   const utils = api.useUtils();
 
   const createTable = api.table.create.useMutation({
     onSuccess: () => utils.base.getById.invalidate({ id: baseId }),
   });
 
-  const createRow = api.row.create.useMutation({
-    onSuccess: () => refetchRows(),
-  });
-
-  const rows: RowData[] = rowData?.rows ?? [];
-  const columns: ColDef[] = useMemo(() => tableData?.columns ?? [], [tableData?.columns]);
-
-  /* ─── TanStack Table ─── */
-  const columnHelper = createColumnHelper<RowData>();
-
-  const tableColumns = useMemo<ColumnDef<RowData, unknown>[]>(() => {
-    const cols: ColumnDef<RowData, unknown>[] = [
-      columnHelper.display({
-        id: "_checkbox",
-        header: () => <input type="checkbox" className="h-3.5 w-3.5 accent-blue-500" />,
-        cell: () => <input type="checkbox" className="h-3.5 w-3.5 accent-blue-500" />,
-        size: 36,
-      }) as ColumnDef<RowData, unknown>,
-      columnHelper.display({
-        id: "_rowNum",
-        header: () => null,
-        cell: ({ row }) => (
-          <span className="text-gray-400 text-xs tabular-nums">{row.index + 1}</span>
-        ),
-        size: 48,
-      }) as ColumnDef<RowData, unknown>,
-    ];
-
-    for (const col of columns) {
-      cols.push(
-        columnHelper.accessor((row) => row.values[col.id] ?? "", {
-          id: col.id,
-          header: () => col.name,
-          cell: (info) => <span>{String(info.getValue())}</span>,
-          size: 180,
-        }) as ColumnDef<RowData, unknown>,
-      );
-    }
-
-    // "+" column at end for adding new columns (placeholder)
-    cols.push(
-      columnHelper.display({
-        id: "_addCol",
-        header: () => <Plus className="h-4 w-4 text-gray-400" />,
-        cell: () => null,
-        size: 48,
-      }) as ColumnDef<RowData, unknown>,
-    );
-
-    return cols;
-  }, [columns, columnHelper]);
-
-  const table = useReactTable({
-    data: rows,
-    columns: tableColumns,
-    getCoreRowModel: getCoreRowModel(),
-  });
+  const columns = useMemo(() => tableData?.columns ?? [], [tableData?.columns]);
 
   /* ─── loading ─── */
   if (baseLoading) {
@@ -193,9 +142,35 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
           <SidebarIcon icon={CircleQuestionMark} />
           <SidebarIcon icon={Bell} />
           {/* Account avatar */}
-          <div className={`flex h-7 w-7 items-center justify-center rounded-full ${hashColor(session?.user?.id ?? "", AVATAR_COLORS)} cursor-pointer text-xs font-medium`}>
-            {session?.user?.name?.charAt(0).toUpperCase()}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className={`flex h-7 w-7 items-center justify-center rounded-full ${hashColor(session?.user?.id ?? "", AVATAR_COLORS)} cursor-pointer select-none`}>
+                <span className="text-sm font-medium text-black">{session?.user?.name?.charAt(0).toUpperCase()}</span>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="right" className="min-w-76 p-5">
+              <div className="px-2 py-1.5">
+                <p className="text-sm font-medium">{session?.user?.name}</p>
+                <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
+              </div>
+              <DropdownMenuSeparator className="my-3" />
+              <DropdownMenuItem className="cursor-pointer"><User />Account</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer"><Users />Manage groups</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer"><Bell />Notification preferences</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer"><Languages />Language preferences</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer"><Palette />Appearance</DropdownMenuItem>
+              <DropdownMenuSeparator className="my-3" />
+              <DropdownMenuItem className="cursor-pointer text-sm"><Mail />Contact sales</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer text-sm"><CircleStar />Upgrade</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer text-sm"><Mail />Tell a friend</DropdownMenuItem>
+              <DropdownMenuSeparator className="my-3" />
+              <DropdownMenuItem className="cursor-pointer text-sm"><LinkIcon />Integrations</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer text-sm"><Wrench />Builder hub</DropdownMenuItem>
+              <DropdownMenuSeparator className="my-3" />
+              <DropdownMenuItem className="cursor-pointer text-sm"><Trash2 />Trash</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer text-sm" onClick={handleSignOut}><LogOut />Log out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
 
@@ -334,64 +309,9 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
           </div>
 
           {/* Grid */}
-          <div className="flex-1 flex flex-col min-w-0 overflow-auto">
-            {!tableData ? (
-              <div className="p-4 space-y-2">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <Skeleton key={i} className="h-8 w-full" />
-                ))}
-              </div>
-            ) : (
-              <table className="w-full text-sm border-collapse">
-                <thead className="sticky top-0 z-10 bg-gray-100">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className="text-left px-3 py-1.5 text-xs font-medium text-gray-600 border-b border-r border-(--colors-border-default)"
-                          style={{ width: header.getSize() }}
-                        >
-                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-blue-50/50 transition-colors">
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="px-3 py-1 border-b border-r border-(--colors-border-default) text-sm"
-                          style={{ width: cell.column.getSize() }}
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                  {/* Add row */}
-                  <tr
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => {
-                      if (activeTableId) createRow.mutate({ tableId: activeTableId });
-                    }}
-                  >
-                    <td className="px-3 py-1 border-b border-r border-(--colors-border-default)" />
-                    <td className="px-3 py-1 border-b border-r border-(--colors-border-default)">
-                      <Plus className="h-3.5 w-3.5 text-gray-400" />
-                    </td>
-                    <td
-                      colSpan={columns.length + 1}
-                      className="px-3 py-1 border-b border-(--colors-border-default)"
-                    />
-                  </tr>
-                </tbody>
-              </table>
-            )}
-          </div>
+          {activeTableId && (
+            <VirtualizedTable tableId={activeTableId} columns={columns} />
+          )}
         </div>
       </div>
     </main>
