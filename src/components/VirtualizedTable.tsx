@@ -11,6 +11,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "~/trpc/react";
 import { Skeleton } from "~/components/ui/skeleton";
+import { EditableCell } from "~/components/EditableCell";
 import { Plus } from "lucide-react";
 
 type RowData = { id: string; order: number; values: Record<string, string | number> };
@@ -33,7 +34,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
     isLoading,
     refetch: refetchRows,
   } = api.row.getByTable.useInfiniteQuery(
-    { tableId, limit: 500 },
+    { tableId, limit: 100 },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
     },
@@ -46,7 +47,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
   );
 
   const createRow = api.row.create.useMutation({
-    onSuccess: () => void refetchRows(),
+    onSuccess: () => refetchRows(),
   });
 
   // Fetch more rows when scrolling near the bottom
@@ -96,7 +97,14 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
         columnHelper.accessor((row) => row.values[col.id] ?? "", {
           id: col.id,
           header: () => col.name,
-          cell: (info) => <span>{String(info.getValue())}</span>,
+          cell: (info) => (
+            <EditableCell
+              tableId={tableId}
+              rowId={info.row.original.id}
+              columnId={col.id}
+              initialValue={String(info.getValue())}
+            />
+          ),
           size: 180,
         }) as ColumnDef<RowData, unknown>,
       );
@@ -112,7 +120,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
     );
 
     return cols;
-  }, [columns, columnHelper]);
+  }, [columns, columnHelper, tableId]);
 
   const table = useReactTable({
     data: rows,
@@ -233,7 +241,7 @@ function BulkCreateInput({ tableId }: { tableId: string }) {
   const utils = api.useUtils();
 
   const bulkCreate = api.row.bulkCreate.useMutation({
-    onSuccess: () => void utils.row.getByTable.invalidate({ tableId }),
+    onSuccess: () => utils.row.getByTable.invalidate({ tableId }),
   });
 
   return (

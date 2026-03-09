@@ -116,12 +116,12 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
   const utils = api.useUtils();
 
   const createTable = api.table.create.useMutation({
-    onSuccess: () => void utils.base.getById.invalidate({ id: baseId }),
+    onSuccess: () => utils.base.getById.invalidate({ id: baseId }),
   });
 
   const deleteTable = api.table.delete.useMutation({
-    onSuccess: () => {
-      void utils.base.getById.invalidate({ id: baseId });
+    onSuccess: async () => {
+      await utils.base.getById.invalidate({ id: baseId });
       setActiveTableId(undefined);
     },
   });
