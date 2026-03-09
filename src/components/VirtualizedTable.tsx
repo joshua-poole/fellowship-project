@@ -246,15 +246,14 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
           {/* Header */}
           <thead
             style={{ display: "grid" }}
-            // TODO: Only have border if there is a cell there
-            className="sticky top-0 z-1 border-b border-(--colors-border-default) bg-[#f6f8fc]"
+            className="sticky top-0 z-1 bg-[#fbfcfe]"
           >
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="border-r border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50 bg-white"
+                    className="border-r border-b border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50 bg-white"
                     style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT }}
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
@@ -312,6 +311,24 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
               </td>
             </tr>
           </tfoot> */}
+          <tfoot
+            style={{ display: "grid" }}
+            className="sticky bottom-0 z-1 bg-[#f6f8fc]"
+          >
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className="border-b border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50 bg-white"
+                    style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT }}
+                  >
+                    {/* {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())} */}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </tfoot>
         </table>
 
         {/* Ghost / add row */}
