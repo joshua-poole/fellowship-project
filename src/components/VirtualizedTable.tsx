@@ -305,13 +305,13 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
 
 
           {/* TODO: ensure that the ghost row goes at the bottom of the table instead of a div, or maybe is even the width of the table somehow */}
-          <tfoot>
+          {/* <tfoot>
             <tr className="w-full bg-white flex">
               <td >
                 test
               </td>
             </tr>
-          </tfoot>
+          </tfoot> */}
         </table>
 
         {/* Ghost / add row */}
