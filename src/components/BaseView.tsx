@@ -416,9 +416,11 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
           </div>
 
           {/* Grid */}
-          {activeTableId && (
-            <VirtualizedTable tableId={activeTableId} columns={columns} />
-          )}
+          <div className="h-full w-full">
+            {activeTableId && (
+              <VirtualizedTable tableId={activeTableId} columns={columns} />
+            )}
+          </div>
         </div>
       </div>
     </main>

@@ -47,6 +47,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
 
   const utils = api.useUtils();
 
+  // TODO: Add optimistic updates for row and column creation to make it instant in frontend
   const createRow = api.row.create.useMutation({
     onMutate: async ({ tableId: tid }) => {
       await utils.row.getByTable.cancel({ tableId: tid });
@@ -77,6 +78,11 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
     onSettled: (_data, _err, { tableId: tid }) => {
       void utils.row.getByTable.invalidate({ tableId: tid });
     },
+  });
+
+  // TODO: imlpement properly
+  const createColumn = api.column.create.useMutation({
+    onSuccess: () => void utils.column.getByTable.invalidate({ tableId }),
   });
 
   const fetchMoreOnBottomReached = useCallback(
@@ -134,7 +140,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
             });
           return (
             <div className="w-8 h-8 flex items-center justify-center ml-3">
-              <span className={`select-none text-xs text-gray-400 tabular-nums ${isSelected ? "hidden" : "group-hover/row:hidden"}`}>
+              <span className={`select-none text-xs text-gray-500 tabular-nums ${isSelected ? "hidden" : "group-hover/row:hidden"}`}>
                 {row.index + 1}
               </span>
               <div
@@ -183,12 +189,13 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
       );
     }
 
+    // Button to add another column
     cols.push(
       columnHelper.display({
         id: "_addCol",
         header: () => (
-          <div className="flex items-center justify-center w-23.5 h-8 cursor-pointer">
-            <Plus className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center justify-center w-23.5 h-8 cursor-pointer" onClick={() => createColumn.mutate({ tableId, name: `Column ${columns.length + 1}`, type: "TEXT" })}>
+            <Plus className="h-4 w-4" />
           </div>
         ),
         cell: () => null,
@@ -229,7 +236,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 min-w-0">
+    <div className="flex flex-col justify-between h-full w-full bg-[#f6f8fc]">
       <div
         ref={tableContainerRef}
         onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
@@ -239,14 +246,15 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
           {/* Header */}
           <thead
             style={{ display: "grid" }}
-            className="sticky top-0 z-1 bg-white border-b border-(--colors-border-default)"
+            // TODO: Only have border if there is a cell there
+            className="sticky top-0 z-1 border-b border-(--colors-border-default) bg-[#f6f8fc]"
           >
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="border-r border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50"
+                    className="border-r border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50 bg-white"
                     style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT }}
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
@@ -262,7 +270,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
               display: "grid",
               height: `${rowVirtualizer.getTotalSize()}px`,
               position: "relative",
-            }}
+            }} className="bg-white"
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const row = tableRows[virtualRow.index]!;
@@ -272,7 +280,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
                   data-index={virtualRow.index}
                   ref={(node) => rowVirtualizer.measureElement(node)}
                   key={row.id}
-                  className={`group/row ${isSelected ? "bg-blue-50" : "hover:bg-gray-50/80"}`}
+                  className={`group/row ${isSelected ? "bg-blue-50" : "hover:bg-gray-50/80"} bg-[#f6f8fc]`}
                   style={{
                     display: "flex",
                     position: "absolute",
@@ -284,7 +292,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
                   {row.getVisibleCells().filter((cell) => cell.column.id !== "_addCol").map((cell, colIndex) => (
                     <td
                       key={cell.id}
-                      className={`border-b border-r border-(--colors-border-default) shrink-0 overflow-hidden ${colIndex === 0 ? "p-0" : "flex items-center px-1.5"}`}
+                      className={`border-b border-r border-(--colors-border-default) shrink-0 overflow-hidden ${colIndex === 0 ? "p-0" : "flex items-center px-1.5"} bg-white`}
                       style={{ display: "flex", width: cell.column.getSize(), height: ROW_HEIGHT }}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -294,11 +302,21 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
               );
             })}
           </tbody>
+
+
+          {/* TODO: ensure that the ghost row goes at the bottom of the table instead of a div, or maybe is even the width of the table somehow */}
+          <tfoot>
+            <tr className="w-full bg-white flex">
+              <td >
+                test
+              </td>
+            </tr>
+          </tfoot>
         </table>
 
         {/* Ghost / add row */}
         <div
-          className="flex items-center border-b border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors"
+          className="flex items-center border-b border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors bg-white"
           style={{ height: ROW_HEIGHT }}
           onClick={() => createRow.mutate({ tableId })}
         >
