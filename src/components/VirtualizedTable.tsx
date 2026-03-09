@@ -12,7 +12,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "~/trpc/react";
 import { Skeleton } from "~/components/ui/skeleton";
 import { EditableCell } from "~/components/EditableCell";
-import { Plus } from "lucide-react";
+import { Plus, ChevronDown, Check } from "lucide-react";
+import { rowId } from "~/lib/ids";
 
 type RowData = { id: string; order: number; values: Record<string, string | number> };
 type ColDef = { id: string; name: string; type: string; order: number };
@@ -22,44 +23,67 @@ interface VirtualizedTableProps {
   columns: ColDef[];
 }
 
+const ROW_HEIGHT = 32;
+
 export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
-  // Infinite query using cursor-based pagination
   const {
     data: rowPages,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     isLoading,
-    refetch: refetchRows,
   } = api.row.getByTable.useInfiniteQuery(
     { tableId, limit: 100 },
-    {
-      getNextPageParam: (lastPage) => lastPage.nextCursor,
-    },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor },
   );
 
-  // Flatten pages into a single array
   const rows: RowData[] = useMemo(
     () => rowPages?.pages.flatMap((p) => p.rows) ?? [],
     [rowPages],
   );
 
+  const utils = api.useUtils();
+
   const createRow = api.row.create.useMutation({
-    onSuccess: () => refetchRows(),
+    onMutate: async ({ tableId: tid }) => {
+      await utils.row.getByTable.cancel({ tableId: tid });
+      const prev = utils.row.getByTable.getInfiniteData({ tableId: tid });
+      const lastPage = prev?.pages[prev.pages.length - 1];
+      const lastOrder = lastPage?.rows[lastPage.rows.length - 1]?.order ?? -1;
+      const optimisticRow: RowData = { id: rowId(), order: lastOrder + 1, values: {} };
+      utils.row.getByTable.setInfiniteData({ tableId: tid }, (old) => {
+        if (!old) return old;
+        return { ...old, pages: old.pages.map((page, i) =>
+          i === old.pages.length - 1 ? { ...page, rows: [...page.rows, optimisticRow] } : page
+        )};
+      });
+      return { prev, optimisticRow };
+    },
+    onError: (_err, { tableId: tid }, ctx) => {
+      if (ctx?.prev) utils.row.getByTable.setInfiniteData({ tableId: tid }, ctx.prev);
+    },
+    onSuccess: (newRow, { tableId: tid }, ctx) => {
+      utils.row.getByTable.setInfiniteData({ tableId: tid }, (old) => {
+        if (!old) return old;
+        return { ...old, pages: old.pages.map((page) => ({
+          ...page,
+          rows: page.rows.map((r) => r.id === ctx?.optimisticRow.id ? newRow : r),
+        }))};
+      });
+    },
+    onSettled: (_data, _err, { tableId: tid }) => {
+      void utils.row.getByTable.invalidate({ tableId: tid });
+    },
   });
 
-  // Fetch more rows when scrolling near the bottom
   const fetchMoreOnBottomReached = useCallback(
     (containerRefElement?: HTMLDivElement | null) => {
       if (containerRefElement) {
         const { scrollHeight, scrollTop, clientHeight } = containerRefElement;
-        if (
-          scrollHeight - scrollTop - clientHeight < 500 &&
-          !isFetchingNextPage &&
-          hasNextPage
-        ) {
+        if (scrollHeight - scrollTop - clientHeight < 500 && !isFetchingNextPage && hasNextPage) {
           void fetchNextPage();
         }
       }
@@ -71,24 +95,66 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
     fetchMoreOnBottomReached(tableContainerRef.current);
   }, [fetchMoreOnBottomReached]);
 
-  // Build TanStack Table columns from the dynamic column definitions
   const columnHelper = createColumnHelper<RowData>();
 
   const tableColumns = useMemo<ColumnDef<RowData, unknown>[]>(() => {
     const cols: ColumnDef<RowData, unknown>[] = [
       columnHelper.display({
-        id: "_checkbox",
-        header: () => <input type="checkbox" className="h-3.5 w-3.5 accent-blue-500" />,
-        cell: () => <input type="checkbox" className="h-3.5 w-3.5 accent-blue-500" />,
-        size: 36,
-      }) as ColumnDef<RowData, unknown>,
-      columnHelper.display({
         id: "_rowNum",
-        header: () => null,
-        cell: ({ row }) => (
-          <span className="text-gray-400 text-xs tabular-nums">{row.index + 1}</span>
-        ),
-        size: 48,
+        header: () => {
+          const allSelected = rows.length > 0 && selectedRows.size === rows.length;
+          return (
+            <div className="w-11 h-8 flex items-center justify-center pl-3">
+              <div
+                className="cursor-pointer flex items-center justify-center"
+                onClick={() =>
+                  setSelectedRows(allSelected ? new Set() : new Set(rows.map((r) => r.id)))
+                }
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: 3,
+                  backgroundColor: allSelected ? "rgb(22, 110, 225)" : "white",
+                  border: `1.5px solid ${allSelected ? "rgb(22, 110, 225)" : "#d1d5db"}`,
+                  boxSizing: "content-box",
+                }}
+              >
+                {allSelected && <Check style={{ width: 9, height: 9, color: "white", strokeWidth: 3 }} />}
+              </div>
+            </div>
+          );
+        },
+        cell: ({ row }) => {
+          const isSelected = selectedRows.has(row.original.id);
+          const toggle = () =>
+            setSelectedRows((prev) => {
+              const next = new Set(prev);
+              isSelected ? next.delete(row.original.id) : next.add(row.original.id);
+              return next;
+            });
+          return (
+            <div className="w-8 h-8 flex items-center justify-center ml-3">
+              <span className={`select-none text-xs text-gray-400 tabular-nums ${isSelected ? "hidden" : "group-hover/row:hidden"}`}>
+                {row.index + 1}
+              </span>
+              <div
+                className={`cursor-pointer rounded-[3px] flex items-center justify-center ${isSelected ? "flex" : "hidden group-hover/row:flex"}`}
+                onClick={toggle}
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: 3,
+                  backgroundColor: isSelected ? "rgb(22, 110, 225)" : "white",
+                  border: `1.5px solid ${isSelected ? "rgb(22, 110, 225)" : "#d1d5db"}`,
+                  boxSizing: "content-box",
+                }}
+              >
+                {isSelected && <Check style={{ width: 9, height: 9, color: "white", strokeWidth: 3 }} />}
+              </div>
+            </div>
+          );
+        },
+        size: 84,
       }) as ColumnDef<RowData, unknown>,
     ];
 
@@ -96,7 +162,14 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
       cols.push(
         columnHelper.accessor((row) => row.values[col.id] ?? "", {
           id: col.id,
-          header: () => col.name,
+          header: () => (
+            <div className="group/header flex items-center w-full h-full overflow-hidden px-2">
+              <span className="truncate font-medium text-xs text-gray-700 flex-1">{col.name}</span>
+              <button className="invisible group-hover/header:visible flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10">
+                <ChevronDown className="h-3 w-3 text-gray-500" />
+              </button>
+            </div>
+          ),
           cell: (info) => (
             <EditableCell
               tableId={tableId}
@@ -113,14 +186,18 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
     cols.push(
       columnHelper.display({
         id: "_addCol",
-        header: () => <Plus className="h-4 w-4 text-gray-400" />,
+        header: () => (
+          <div className="flex items-center justify-center w-23.5 h-8 cursor-pointer">
+            <Plus className="h-4 w-4 text-gray-400" />
+          </div>
+        ),
         cell: () => null,
-        size: 48,
+        size: 94,
       }) as ColumnDef<RowData, unknown>,
     );
 
     return cols;
-  }, [columns, columnHelper, tableId]);
+  }, [columns, columnHelper, tableId, rows, selectedRows]);
 
   const table = useReactTable({
     data: rows,
@@ -132,7 +209,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
 
   const rowVirtualizer = useVirtualizer({
     count: tableRows.length,
-    estimateSize: () => 33,
+    estimateSize: () => ROW_HEIGHT,
     getScrollElement: () => tableContainerRef.current,
     measureElement:
       typeof window !== "undefined" && !navigator.userAgent.includes("Firefox")
@@ -152,86 +229,107 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
   }
 
   return (
-    <div
-      ref={tableContainerRef}
-      onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
-      className="flex-1 min-w-0 overflow-auto relative"
-    >
-      <table style={{ display: "grid" }} className="text-sm">
-        <thead
-          style={{ display: "grid", position: "sticky", top: 0, zIndex: 1 }}
-          className="bg-gray-100"
-        >
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="text-left px-3 py-1.5 text-xs font-medium text-gray-600 border-b border-r border-(--colors-border-default)"
-                  style={{ display: "flex", width: header.getSize() }}
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody
-          style={{
-            display: "grid",
-            height: `${rowVirtualizer.getTotalSize()}px`,
-            position: "relative",
-          }}
-        >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const row = tableRows[virtualRow.index]!;
-            return (
-              <tr
-                data-index={virtualRow.index}
-                ref={(node) => rowVirtualizer.measureElement(node)}
-                key={row.id}
-                className="hover:bg-blue-50/50"
-                style={{
-                  display: "flex",
-                  position: "absolute",
-                  transform: `translateY(${virtualRow.start}px)`,
-                  width: "100%",
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className="px-3 py-1 border-b border-r border-(--colors-border-default) text-sm"
-                    style={{ display: "flex", width: cell.column.getSize() }}
+    <div className="flex flex-col flex-1 min-h-0 min-w-0">
+      <div
+        ref={tableContainerRef}
+        onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
+        className="flex-1 min-w-0 overflow-auto relative"
+      >
+        <table style={{ display: "grid" }} className="text-sm">
+          {/* Header */}
+          <thead
+            style={{ display: "grid" }}
+            className="sticky top-0 z-1 bg-white border-b border-(--colors-border-default)"
+          >
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className="border-r border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50"
+                    style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT }}
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
                 ))}
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            ))}
+          </thead>
 
-      {/* Add row / bulk create */}
-      <div className="flex items-center border-b border-(--colors-border-default)">
+          {/* Body */}
+          <tbody
+            style={{
+              display: "grid",
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              position: "relative",
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const row = tableRows[virtualRow.index]!;
+              const isSelected = selectedRows.has(row.original.id);
+              return (
+                <tr
+                  data-index={virtualRow.index}
+                  ref={(node) => rowVirtualizer.measureElement(node)}
+                  key={row.id}
+                  className={`group/row ${isSelected ? "bg-blue-50" : "hover:bg-gray-50/80"}`}
+                  style={{
+                    display: "flex",
+                    position: "absolute",
+                    transform: `translateY(${virtualRow.start}px)`,
+                    width: "100%",
+                    height: ROW_HEIGHT,
+                  }}
+                >
+                  {row.getVisibleCells().filter((cell) => cell.column.id !== "_addCol").map((cell, colIndex) => (
+                    <td
+                      key={cell.id}
+                      className={`border-b border-r border-(--colors-border-default) shrink-0 overflow-hidden ${colIndex === 0 ? "p-0" : "flex items-center px-1.5"}`}
+                      style={{ display: "flex", width: cell.column.getSize(), height: ROW_HEIGHT }}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* Ghost / add row */}
         <div
-          className="flex items-center hover:bg-gray-50 cursor-pointer transition-colors flex-1"
+          className="flex items-center border-b border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors"
+          style={{ height: ROW_HEIGHT }}
           onClick={() => createRow.mutate({ tableId })}
         >
-          <div className="px-3 py-1 border-r border-(--colors-border-default)" style={{ width: 36 }} />
-          <div className="px-3 py-1 border-r border-(--colors-border-default)" style={{ width: 48 }}>
-            <Plus className="h-3.5 w-3.5 text-gray-400" />
+          <div className="shrink-0 border-r border-(--colors-border-default) h-full w-21">
+            <div className="w-8 h-8 flex items-center justify-center ml-3">
+              <Plus className="h-4 w-4 text-gray-400" />
+            </div>
           </div>
         </div>
-        <BulkCreateInput tableId={tableId} />
+
+        {isFetchingNextPage && (
+          <div className="py-2 text-center text-xs text-gray-400">Loading more...</div>
+        )}
       </div>
 
-      {isFetchingNextPage && (
-        <div className="py-2 text-center text-xs text-gray-400">Loading more...</div>
-      )}
+      {/* Summary bar */}
+      <div className="flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-7">
+        <div className="flex items-center justify-between px-3 shrink-0 border-r border-(--colors-border-default) h-full w-21">
+          <span className="tabular-nums">{rows.length} records</span>
+        </div>
+        {columns.map((col) => (
+          <div
+            key={col.id}
+            className="flex items-center justify-end px-2 shrink-0 border-r border-(--colors-border-default) h-full text-gray-400 hover:bg-gray-50 cursor-pointer w-45"
+          >
+            <span>Summary</span>
+            <ChevronDown className="h-3 w-3 ml-1" />
+          </div>
+        ))}
+        <BulkCreateInput tableId={tableId} />
+      </div>
     </div>
   );
 }
@@ -245,7 +343,7 @@ function BulkCreateInput({ tableId }: { tableId: string }) {
   });
 
   return (
-    <div className="flex items-center gap-1 px-2">
+    <div className="flex items-center gap-1 px-2 ml-auto">
       <input
         type="number"
         min={1}

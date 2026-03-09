@@ -7,6 +7,7 @@ import { authClient, signOut } from "~/server/better-auth/client";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Button } from "~/components/ui/button";
 import { OmniBaseView } from "./icons/OmniBaseView";
+import { RowHeightIcon, GridFeatureIcon } from "./icons";
 import { LogoIcon } from "./Logo";
 import {
   ArrowLeft,
@@ -14,12 +15,12 @@ import {
   ChevronDown,
   CircleQuestionMark,
   EyeOff,
-  Filter,
+  ListFilter,
   Group,
-  ArrowUpDown,
-  Paintbrush,
-  Rows3,
-  Share2,
+  ArrowDownUp,
+  PaintBucket,
+  ExternalLink,
+  MoreHorizontal,
   Search,
   Menu,
   Plus,
@@ -328,32 +329,33 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
           </div>
 
           <div className="flex items-center">
-            <button className="flex items-center gap-1 px-1.5 text-sm text-gray-500" style={{ height: 32 }}>
+            <button className="flex items-center gap-1 px-3 text-sm text-gray-500" style={{ height: 32 }}>
               Tools <ChevronDown className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         {/* ─── Views Bar ─── */}
-        <div className="flex h-9 items-center justify-between border-b border-(--colors-border-default) px-2 shrink-0">
-          <div className="flex items-center gap-1">
-            <button className="p-1.5 rounded-sm hover:bg-gray-100">
+        <div className="flex h-12 items-center justify-between border-b border-(--colors-border-default) shrink-0">
+          <div className="pl-3 pr-2 flex items-center">
+            <button className="h-8 w-8 rounded-sm hover:bg-gray-100 mr-1 flex items-center justify-center" style={{ padding: 0 }}>
               <Menu className="h-4 w-4 text-gray-500" />
             </button>
             <button className="flex items-center gap-1 px-2 py-1 text-sm hover:bg-gray-100 rounded-sm">
+              <GridFeatureIcon className="h-4 w-4" style={{ color: "rgb(22, 110, 225)" }} />
               {activeView?.name ?? "Grid view"} <ChevronDown className="h-3 w-3 text-gray-400" />
             </button>
           </div>
 
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 pr-2">
             <ToolbarButton icon={EyeOff} label="Hide fields" />
-            <ToolbarButton icon={Filter} label="Filter" />
+            <ToolbarButton icon={ListFilter} label="Filter" />
             <ToolbarButton icon={Group} label="Group" />
-            <ToolbarButton icon={ArrowUpDown} label="Sort" />
-            <ToolbarButton icon={Paintbrush} label="Color" />
-            <ToolbarButton icon={Rows3} label="Row height" />
-            <ToolbarButton icon={Share2} label="Share and sync" />
-            <button className="p-1.5 rounded-sm hover:bg-gray-100">
+            <ToolbarButton icon={ArrowDownUp} label="Sort" />
+            <ToolbarButton icon={PaintBucket} label="Color" />
+            <ToolbarButton icon={RowHeightIcon} label="" />
+            <ToolbarButton icon={ExternalLink} label="Share and sync" />
+            <button className="p-1.5 rounded-sm hover:bg-gray-100 ml-2">
               <Search className="h-3.5 w-3.5 text-gray-500" />
             </button>
           </div>
@@ -362,34 +364,54 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         {/* ─── Views Sidebar + Grid ─── */}
         <div className="flex flex-1 min-h-0">
           {/* Views Sidebar */}
-          <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-2 py-2.5" style={{ width: 280 }}>
-            <div className="pb-2">
-              <Button size="xs" className="w-full justify-start gap-1.5 text-xs">
-                <Plus className="h-3 w-3" /> Create...
-              </Button>
+          <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-1 py-1.25" style={{ width: 280 }}>
+            {/* Create button */}
+            <div className="flex-none pb-1">
+              <button className="w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md hover:bg-(--colors-background-selected-hover) cursor-pointer transition-colors">
+                <Plus className="h-4 w-4 shrink-0" />
+                <span className="truncate">Create new...</span>
+              </button>
             </div>
-            <div className="pb-2">
-              <div className="flex items-center gap-1 rounded-sm border border-(--colors-border-default) bg-white px-2 py-1">
-                <Search className="h-3 w-3 text-gray-400" />
+
+            {/* Search */}
+            <div className="flex-none pb-1 mt-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Find a view"
-                  className="flex-1 bg-transparent text-xs outline-none placeholder:text-gray-400"
+                  className="w-full pl-7 pr-7 py-1 text-xs outline-none bg-transparent border-0 placeholder:text-gray-400"
                 />
-                <Settings className="h-3 w-3 text-gray-400 cursor-pointer" />
+                <Settings className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 cursor-pointer" />
               </div>
             </div>
-            <div className="flex-1 overflow-auto">
-              {tableData?.views?.map((v) => (
-                <div
-                  key={v.id}
-                  className={`px-2 py-1.5 text-xs rounded-sm cursor-pointer transition-colors ${
-                    v.id === activeView?.id ? "bg-white font-medium shadow-sm" : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  {v.name}
-                </div>
-              ))}
+
+            {/* View list */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <ul role="listbox">
+                {tableData?.views?.map((v) => (
+                  <li
+                    key={v.id}
+                    role="option"
+                    aria-selected={v.id === activeView?.id}
+                    className={`group relative flex items-center rounded-sm px-3 py-2 cursor-pointer transition-colors ${
+                      v.id === activeView?.id
+                        ? "bg-(--colors-background-selected)"
+                        : "hover:bg-(--colors-background-selected-hover)"
+                    }`}
+                  >
+                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                      <GridFeatureIcon className="h-4 w-4 shrink-0" style={{ color: "rgb(22, 110, 225)" }} />
+                      <span className={`truncate text-sm ${v.id === activeView?.id ? "font-semibold" : ""}`}>
+                        {v.name}
+                      </span>
+                    </div>
+                    <button className="invisible group-hover:visible flex items-center justify-center h-5 w-5 rounded shrink-0 hover:bg-black/10">
+                      <MoreHorizontal className="h-3.5 w-3.5 text-gray-500" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 

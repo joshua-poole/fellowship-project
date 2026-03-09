@@ -102,6 +102,7 @@ export function EditableCell({
     navigatingRef.current = true;
     if (!focusAdjacentCell(input, direction)) {
       navigatingRef.current = false;
+      input.blur();
     }
   };
 
