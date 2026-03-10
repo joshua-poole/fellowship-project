@@ -1,11 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { faker } from "@faker-js/faker";
 import { DbNull } from "@prisma/client-runtime-utils";
-import { rowId } from "~/lib/ids";
+import { rowId, rowIdFast } from "~/lib/ids";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
   RowGetByTableInputSchema,
-  RowGetByTableOutputSchema,
   RowCreateInputSchema,
   RowCreateOutputSchema,
   RowBulkCreateInputSchema,
@@ -66,7 +65,6 @@ const ownerWhere = (tableId: string, userId: string) => ({
 export const rowRouter = createTRPCRouter({
   getByTable: protectedProcedure
     .input(RowGetByTableInputSchema)
-    .output(RowGetByTableOutputSchema)
     .query(async ({ ctx, input }) => {
       const table = await ctx.db.table.findFirst({
         where: ownerWhere(input.tableId, ctx.session.user.id),
@@ -90,6 +88,7 @@ export const rowRouter = createTRPCRouter({
       const rows = await ctx.db.row.findMany({
         where: {
           tableId: input.tableId,
+          ...(input.cursor != null && { order: { gt: input.cursor } }),
           ...(conditions.length > 0 && { AND: conditions as [] }),
         },
         orderBy: [
@@ -101,7 +100,6 @@ export const rowRouter = createTRPCRouter({
           ) ?? []),
           { order: "asc" as const },
         ],
-        skip: input.cursor ?? 0,
         take: input.limit + 1,
         select: { id: true, order: true, values: true },
       });
@@ -109,10 +107,10 @@ export const rowRouter = createTRPCRouter({
       let nextCursor: number | undefined;
       if (rows.length > input.limit) {
         rows.pop();
-        nextCursor = (input.cursor ?? 0) + input.limit;
+        nextCursor = rows[rows.length - 1]!.order;
       }
 
-      return {
+      const result = {
         rows: rows.map((row) => ({
           id: row.id,
           order: row.order,
@@ -120,6 +118,8 @@ export const rowRouter = createTRPCRouter({
         })),
         nextCursor,
       };
+
+      return result;
     }),
 
   create: protectedProcedure
@@ -158,7 +158,7 @@ export const rowRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const table = await ctx.db.table.findFirst({
         where: ownerWhere(input.tableId, ctx.session.user.id),
-        include: { columns: { select: { id: true, type: true } } },
+        include: { columns: { select: { id: true, name: true, type: true } } },
       });
 
       if (!table) {
@@ -172,40 +172,30 @@ export const rowRouter = createTRPCRouter({
       });
 
       const startOrder = (last?.order ?? -1) + 1;
-      const BATCH_SIZE = 5000;
+      const now = new Date().toISOString();
 
-      // Build all batches
-      const batches: Parameters<typeof ctx.db.row.createMany>[0][] = [];
-      for (let i = 0; i < input.count; i += BATCH_SIZE) {
-        const batchSize = Math.min(BATCH_SIZE, input.count - i);
-        const ids = new Set<string>();
-        while (ids.size < batchSize) ids.add(rowId());
-
-        batches.push({
-          data: [...ids].map((id, j) => ({
-            id,
-            tableId: input.tableId,
-            order: startOrder + i + j,
-            values: Object.fromEntries(
-              table.columns.map((col) => [
-                col.id,
-                col.type === "NUMBER"
-                  ? faker.number.int({ min: 0, max: 10000 })
-                  : faker.lorem.words({ min: 1, max: 3 }),
-              ]),
-            ),
-          })),
-          skipDuplicates: true,
-        });
+      const rowsSql = [];
+      for (let i = 0; i < input.count; i++) {
+        const id = rowIdFast();
+        const order = startOrder + i;
+        const values: Record<string, string | number> = {};
+        for (const col of table.columns) {
+          if (col.type === "NUMBER") {
+            values[col.id] = faker.number.int({ min: 0, max: 10000 });
+          } else if (col.name.toLowerCase().includes("name")) {
+            values[col.id] = faker.person.fullName();
+          } else {
+            values[col.id] = faker.lorem.sentences({ min: 1, max: 3 });
+          }
+        }
+        const valuesJson = JSON.stringify(values).replace(/'/g, "''");
+        rowsSql.push(`('${id}', '${input.tableId}', ${order}, '${valuesJson}'::jsonb, '${now}')`);
       }
-
-      // Run all batches in parallel
-      const results = await Promise.all(
-        batches.map((batch) => ctx.db.row.createMany(batch)),
-      );
-      const created = results.reduce((sum, r) => sum + r.count, 0);
-
-      return { count: created };
+      await ctx.db.$executeRawUnsafe(`
+        INSERT INTO "Row" ("id", "tableId", "order", "values", "updatedAt")
+        VALUES ${rowsSql.join(", ")};
+      `);
+      return { count: input.count };
     }),
 
   updateCell: protectedProcedure

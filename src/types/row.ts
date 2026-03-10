@@ -9,7 +9,7 @@ const CellValuesSchema = z.record(z.string(), z.union([z.string(), z.number()]))
 export const RowGetByTableInputSchema = z.object({
   tableId: z.string(),
   cursor: z.number().int().optional(),
-  limit: z.number().int().min(1).max(500).default(100),
+  limit: z.number().int().min(1).max(5000).default(100),
   search: z.string().optional(),
   sorts: z
     .array(

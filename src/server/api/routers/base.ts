@@ -72,7 +72,7 @@ export const baseRouter = createTRPCRouter({
                 create: [
                   { id: columnId(), name: "Name", type: "TEXT", order: 0 },
                   { id: columnId(), name: "Notes", type: "TEXT", order: 1 },
-                  { id: columnId(), name: "Status", type: "TEXT", order: 2 },
+                  { id: columnId(), name: "Status", type: "NUMBER", order: 2 },
                 ],
               },
               views: {

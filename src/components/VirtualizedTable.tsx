@@ -14,6 +14,8 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { EditableCell } from "~/components/EditableCell";
 import { Plus, ChevronDown, Check } from "lucide-react";
 import { rowId } from "~/lib/ids";
+import { type RowGetByTableInputSchema } from '../types/row';
+import type z from "zod";
 
 type RowData = { id: string; order: number; values: Record<string, string | number> };
 type ColDef = { id: string; name: string; type: string; order: number };
@@ -37,6 +39,8 @@ interface VirtualizedTableProps {
   sorts?: ViewSort[];
 }
 
+type TableQueryInput =z.infer<typeof RowGetByTableInputSchema>;
+
 const ROW_HEIGHT = 32;
 
 export function VirtualizedTable({ tableId, columns, search, filters, sorts }: VirtualizedTableProps) {
@@ -44,14 +48,14 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   // Build query input with view config
-  const queryInput = useMemo(() => {
+  const queryInput = useMemo<TableQueryInput>(() => {
     const input: {
       tableId: string;
       limit: number;
       search?: string;
       filters?: { columnId: string; operator: "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt"; value?: string | number }[];
       sorts?: { columnId: string; direction: "asc" | "desc" }[];
-    } = { tableId, limit: 100 };
+    } = { tableId, limit: 1000 };
 
     if (search) input.search = search;
 
@@ -257,7 +261,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
     );
 
     return cols;
-  }, [columns, columnHelper, tableId, rows, selectedRows, createColumn]);
+  }, [columns, columnHelper, tableId, selectedRows, createColumn, rows]);
 
   const table = useReactTable({
     data: rows,
@@ -381,31 +385,49 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
 
       {/* Summary bar */}
       <div className="flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-7">
-        <div className="flex items-center justify-between px-3 shrink-0 border-r border-(--colors-border-default) h-full w-21">
-          <span className="tabular-nums">{rows.length} records</span>
-        </div>
-        {columns.map((col) => (
-          <div
-            key={col.id}
-            className="flex items-center justify-end px-2 shrink-0 border-r border-(--colors-border-default) h-full text-gray-400 hover:bg-gray-50 cursor-pointer w-45"
-          >
-            <span>Summary</span>
-            <ChevronDown className="h-3 w-3 ml-1" />
-          </div>
-        ))}
-        <BulkCreateInput tableId={tableId} />
+        <BulkCreateInput queryInput={queryInput} />
       </div>
     </div>
   );
 }
 
-function BulkCreateInput({ tableId }: { tableId: string }) {
+function BulkCreateInput({ queryInput }: { queryInput: TableQueryInput }) {
   const [count, setCount] = useState(1000);
+  const [progress, setProgress] = useState(0);
+  const [isInserting, setIsInserting] = useState(false);
   const utils = api.useUtils();
 
-  const bulkCreate = api.row.bulkCreate.useMutation({
-    onSuccess: () => utils.row.getByTable.invalidate({ tableId }),
-  });
+  const bulkCreate = api.row.bulkCreate.useMutation();
+
+  const BATCH_SIZE = 10000;
+
+  const handleBulkInsert = async () => {
+    setIsInserting(true);
+    setProgress(0);
+    let inserted = 0;
+    const start = performance.now();
+
+    while (inserted < count) {
+      const batch = Math.min(BATCH_SIZE, count - inserted);
+      const batchStart = performance.now();
+
+      await bulkCreate.mutateAsync({
+        tableId: queryInput.tableId,
+        count: batch
+      });
+
+      inserted += batch;
+      setProgress(Math.round((inserted / count) * 100));
+      console.log(`Batch ${batch} rows: ${(performance.now() - batchStart).toFixed(0)}ms`);
+    }
+
+    console.log(`Insert total: ${(performance.now() - start).toFixed(0)}ms`);
+    const refetchStart = performance.now();
+    await utils.row.getByTable.invalidate();
+    console.log(`Refetch: ${(performance.now() - refetchStart).toFixed(0)}ms`);
+    console.log(`Total: ${(performance.now() - start).toFixed(0)}ms`);
+    setIsInserting(false);
+  };
 
   return (
     <div className="flex items-center gap-1 px-2 ml-auto">
@@ -416,14 +438,14 @@ function BulkCreateInput({ tableId }: { tableId: string }) {
         value={count}
         onChange={(e) => setCount(Number(e.target.value))}
         className="w-20 px-2 py-0.5 text-xs border border-(--colors-border-default) rounded-sm outline-none"
-        disabled={bulkCreate.isPending}
+        disabled={isInserting}
       />
       <button
         className="px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors whitespace-nowrap rounded-sm"
-        onClick={() => bulkCreate.mutate({ tableId, count })}
-        disabled={bulkCreate.isPending || count < 1}
+        onClick={handleBulkInsert}
+        disabled={isInserting || count < 1}
       >
-        {bulkCreate.isPending ? "Inserting..." : `+ rows`}
+        {isInserting ? `Inserting... ${progress}%` : `+ rows`}
       </button>
     </div>
   );
