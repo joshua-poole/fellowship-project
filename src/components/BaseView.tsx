@@ -365,24 +365,28 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         <div className="flex flex-1 min-h-0 min-w-0">
           {/* Views Sidebar */}
           <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-1 py-1.25" style={{ width: 280 }}>
-            {/* Create button */}
-            <div className="flex-none pb-1">
-              <button className="w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md hover:bg-(--colors-background-selected-hover) cursor-pointer transition-colors">
-                <Plus className="h-4 w-4 shrink-0" />
-                <span className="truncate">Create new...</span>
-              </button>
-            </div>
+            <div className="flex flex-col pb-2">
+              {/* Create button */}
+              <div className="flex-none pb-1">
+                <button className="w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md hover:bg-(--colors-background-selected-hover) cursor-pointer transition-colors">
+                  <Plus className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Create new...</span>
+                </button>
+              </div>
 
-            {/* Search */}
-            <div className="flex-none pb-1 mt-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Find a view"
-                  className="w-full pl-7 pr-7 py-1 text-xs outline-none bg-transparent border-0 placeholder:text-gray-400"
-                />
-                <Settings className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 cursor-pointer" />
+              {/* Search */}
+              <div className="flex-none mt-1">
+                <div className="relative focus-within:rounded-md focus-within:shadow-[inset_0_0_0_2px_rgb(22,110,225)]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Find a view"
+                    className="py-1.5 pl-9 pr-7.5 h-8 w-65.75 text-xs outline-none bg-transparent placeholder:text-gray-400 focus:border-red-600"
+                  />
+                  <div className="h-4 w-7 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2">
+                    <Settings className="h-4 w-4 text-black cursor-pointer transform rotate-30" strokeWidth={1.5}/>
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -90,23 +90,26 @@ export const rowRouter = createTRPCRouter({
       const rows = await ctx.db.row.findMany({
         where: {
           tableId: input.tableId,
-          ...(input.cursor !== undefined && { order: { gt: input.cursor } }),
           ...(conditions.length > 0 && { AND: conditions as [] }),
         },
         orderBy: [
-          ...(input.sort
-            ? [{ values: { path: [input.sort.columnId], order: input.sort.direction } } as never]
-            : []),
+          ...(input.sorts?.map(
+            (s) =>
+              ({
+                values: { path: [s.columnId], order: s.direction },
+              }) as never,
+          ) ?? []),
           { order: "asc" as const },
         ],
+        skip: input.cursor ?? 0,
         take: input.limit + 1,
         select: { id: true, order: true, values: true },
       });
 
       let nextCursor: number | undefined;
       if (rows.length > input.limit) {
-        rows.pop(); // remove the extra row used to detect next page
-        nextCursor = rows[rows.length - 1]!.order;
+        rows.pop();
+        nextCursor = (input.cursor ?? 0) + input.limit;
       }
 
       return {

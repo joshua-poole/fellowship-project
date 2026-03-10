@@ -18,16 +18,60 @@ import { rowId } from "~/lib/ids";
 type RowData = { id: string; order: number; values: Record<string, string | number> };
 type ColDef = { id: string; name: string; type: string; order: number };
 
+interface ViewFilter {
+  columnId: string;
+  operator: string;
+  value?: string | number | null;
+}
+
+interface ViewSort {
+  columnId: string;
+  direction: "asc" | "desc";
+}
+
 interface VirtualizedTableProps {
   tableId: string;
   columns: ColDef[];
+  search?: string;
+  filters?: ViewFilter[];
+  sorts?: ViewSort[];
 }
 
 const ROW_HEIGHT = 32;
 
-export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
+export function VirtualizedTable({ tableId, columns, search, filters, sorts }: VirtualizedTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+
+  // Build query input with view config
+  const queryInput = useMemo(() => {
+    const input: {
+      tableId: string;
+      limit: number;
+      search?: string;
+      filters?: { columnId: string; operator: "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt"; value?: string | number }[];
+      sorts?: { columnId: string; direction: "asc" | "desc" }[];
+    } = { tableId, limit: 100 };
+
+    if (search) input.search = search;
+
+    if (filters && filters.length > 0) {
+      input.filters = filters.map((f) => ({
+        columnId: f.columnId,
+        operator: f.operator as "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt",
+        ...(f.value != null && f.value !== "" ? { value: f.value } : {}),
+      }));
+    }
+
+    if (sorts && sorts.length > 0) {
+      input.sorts = sorts.map((s) => ({
+        columnId: s.columnId,
+        direction: s.direction,
+      }));
+    }
+
+    return input;
+  }, [tableId, search, filters, sorts]);
 
   const {
     data: rowPages,
@@ -35,10 +79,9 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
-  } = api.row.getByTable.useInfiniteQuery(
-    { tableId, limit: 100 },
-    { getNextPageParam: (lastPage) => lastPage.nextCursor },
-  );
+  } = api.row.getByTable.useInfiniteQuery(queryInput, {
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+  });
 
   const rows: RowData[] = useMemo(
     () => rowPages?.pages.flatMap((p) => p.rows) ?? [],
@@ -51,11 +94,11 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
   const createRow = api.row.create.useMutation({
     onMutate: async ({ tableId: tid }) => {
       await utils.row.getByTable.cancel({ tableId: tid });
-      const prev = utils.row.getByTable.getInfiniteData({ tableId: tid });
+      const prev = utils.row.getByTable.getInfiniteData(queryInput);
       const lastPage = prev?.pages[prev.pages.length - 1];
       const lastOrder = lastPage?.rows[lastPage.rows.length - 1]?.order ?? -1;
       const optimisticRow: RowData = { id: rowId(), order: lastOrder + 1, values: {} };
-      utils.row.getByTable.setInfiniteData({ tableId: tid }, (old) => {
+      utils.row.getByTable.setInfiniteData(queryInput, (old) => {
         if (!old) return old;
         return { ...old, pages: old.pages.map((page, i) =>
           i === old.pages.length - 1 ? { ...page, rows: [...page.rows, optimisticRow] } : page
@@ -63,11 +106,11 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
       });
       return { prev, optimisticRow };
     },
-    onError: (_err, { tableId: tid }, ctx) => {
-      if (ctx?.prev) utils.row.getByTable.setInfiniteData({ tableId: tid }, ctx.prev);
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.row.getByTable.setInfiniteData(queryInput, ctx.prev);
     },
-    onSuccess: (newRow, { tableId: tid }, ctx) => {
-      utils.row.getByTable.setInfiniteData({ tableId: tid }, (old) => {
+    onSuccess: (newRow, _vars, ctx) => {
+      utils.row.getByTable.setInfiniteData(queryInput, (old) => {
         if (!old) return old;
         return { ...old, pages: old.pages.map((page) => ({
           ...page,
@@ -75,8 +118,8 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
         }))};
       });
     },
-    onSettled: (_data, _err, { tableId: tid }) => {
-      void utils.row.getByTable.invalidate({ tableId: tid });
+    onSettled: () => {
+      void utils.row.getByTable.invalidate({ tableId });
     },
   });
 

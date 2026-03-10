@@ -149,7 +149,7 @@ export function EditableCell({
             borderTop: isFirstRow ? "none" : `2px solid ${BORDER_COLOR}`,
             borderBottom: `2px solid ${BORDER_COLOR}`,
             borderLeft: isFirstCol ? "none" : `2px solid ${BORDER_COLOR}`,
-            borderRight: isLastCol ? "none" : `2px solid ${BORDER_COLOR}`,
+            borderRight: `2px solid ${BORDER_COLOR}`,
             zIndex: 10,
           }}
         />

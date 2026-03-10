@@ -11,11 +11,13 @@ export const RowGetByTableInputSchema = z.object({
   cursor: z.number().int().optional(),
   limit: z.number().int().min(1).max(500).default(100),
   search: z.string().optional(),
-  sort: z
-    .object({
-      columnId: z.string(),
-      direction: z.enum(["asc", "desc"]),
-    })
+  sorts: z
+    .array(
+      z.object({
+        columnId: z.string(),
+        direction: z.enum(["asc", "desc"]),
+      }),
+    )
     .optional(),
   filters: z
     .array(
