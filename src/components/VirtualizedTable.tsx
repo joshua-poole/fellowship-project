@@ -31,6 +31,8 @@ import {
   GitBranch,
   EyeOff,
   Trash2,
+  ALargeSmall,
+  Hash,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -49,6 +51,7 @@ type ColDef = { id: string; name: string; type: string; order: number };
 interface TableVirtualizerContextValue {
   scrollToIndex: (index: number) => void;
   rowCount: number;
+  queryInput: TableQueryInput;
 }
 
 const TableVirtualizerContext = createContext<TableVirtualizerContextValue | null>(null);
@@ -175,22 +178,90 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
   });
 
   const createColumn = api.column.create.useMutation({
-    onSuccess: () => {
-      void utils.column.getByTable.invalidate({ tableId });
+    onMutate: async (input) => {
+      await utils.table.getById.cancel({ id: tableId });
+      const prev = utils.table.getById.getData({ id: tableId });
+      const existingCols = prev?.columns ?? [];
+      let newOrder: number;
+      if (input.order !== undefined) {
+        newOrder = input.order;
+      } else {
+        newOrder = (existingCols[existingCols.length - 1]?.order ?? -1) + 1;
+      }
+      const optimisticCol = {
+        id: `fld_tmp_${Date.now()}`,
+        name: input.name,
+        type: input.type,
+        order: newOrder,
+      };
+      utils.table.getById.setData({ id: tableId }, (old) => {
+        if (!old) return old;
+        let cols: typeof old.columns;
+        if (input.order !== undefined) {
+          cols = old.columns.map((c) =>
+            c.order >= input.order! ? { ...c, order: c.order + 1 } : c
+          );
+          cols.push(optimisticCol);
+        } else {
+          cols = [...old.columns, optimisticCol];
+        }
+        cols.sort((a, b) => a.order - b.order);
+        return { ...old, columns: cols };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.table.getById.setData({ id: tableId }, ctx.prev);
+    },
+    onSettled: () => {
       void utils.table.getById.invalidate({ id: tableId });
     },
   });
 
   const updateColumn = api.column.update.useMutation({
-    onSuccess: () => {
-      void utils.column.getByTable.invalidate({ tableId });
+    onMutate: async (input) => {
+      await utils.table.getById.cancel({ id: tableId });
+      const prev = utils.table.getById.getData({ id: tableId });
+      utils.table.getById.setData({ id: tableId }, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          columns: old.columns.map((c) =>
+            c.id === input.id
+              ? {
+                  ...c,
+                  ...(input.name !== undefined && { name: input.name }),
+                  ...(input.type !== undefined && { type: input.type }),
+                  ...(input.order !== undefined && { order: input.order }),
+                }
+              : c
+          ),
+        };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.table.getById.setData({ id: tableId }, ctx.prev);
+    },
+    onSettled: () => {
       void utils.table.getById.invalidate({ id: tableId });
     },
   });
 
   const deleteColumn = api.column.delete.useMutation({
-    onSuccess: () => {
-      void utils.column.getByTable.invalidate({ tableId });
+    onMutate: async ({ id }) => {
+      await utils.table.getById.cancel({ id: tableId });
+      const prev = utils.table.getById.getData({ id: tableId });
+      utils.table.getById.setData({ id: tableId }, (old) => {
+        if (!old) return old;
+        return { ...old, columns: old.columns.filter((c) => c.id !== id) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.table.getById.setData({ id: tableId }, ctx.prev);
+    },
+    onSettled: () => {
       void utils.table.getById.invalidate({ id: tableId });
     },
   });
@@ -297,18 +368,24 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
                       defaultValue={col.name}
                       className="flex-1 min-w-0 text-xs font-medium outline-none bg-transparent border-2 border-blue-500 rounded px-1 -mx-1"
                       onClick={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
                       onBlur={(e) => {
                         const val = e.currentTarget.value.trim();
                         if (val && val !== col.name) updateColumn.mutate({ id: col.id, name: val });
                         setRenamingColumnId(null);
                       }}
                       onKeyDown={(e) => {
+                        e.stopPropagation();
                         if (e.key === "Enter") e.currentTarget.blur();
                         if (e.key === "Escape") setRenamingColumnId(null);
                       }}
                     />
                   ) : (
                     <>
+                      {col.type === "NUMBER"
+                        ? <Hash className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
+                        : <ALargeSmall className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
+                      }
                       <span className="truncate font-medium text-xs text-gray-700 flex-1">{col.name}</span>
                       <button className="invisible group-hover/header:visible flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10">
                         <ChevronDown className="h-3 w-3 text-gray-500" />
@@ -318,7 +395,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" side="bottom" className="w-60">
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => setRenamingColumnId(col.id)}>
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => requestAnimationFrame(() => setRenamingColumnId(col.id))}>
                   <Pencil className="h-4 w-4" /> Edit field
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -441,7 +518,8 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
   const virtualizerContextValue = useMemo<TableVirtualizerContextValue>(() => ({
     scrollToIndex: (index: number) => rowVirtualizer.scrollToIndex(index, { align: "auto" }),
     rowCount: tableRows.length,
-  }), [rowVirtualizer, tableRows.length]);
+    queryInput,
+  }), [rowVirtualizer, tableRows.length, queryInput]);
 
   if (isLoading) {
     return (

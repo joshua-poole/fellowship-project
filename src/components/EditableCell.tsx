@@ -34,6 +34,7 @@ export function EditableCell({
     () => pendingEdits.get(cellKey) ?? initialValue,
   );
   const [focused, setFocused] = useState(false);
+  const [editing, setEditing] = useState(false);
   const navigatingRef = useRef(false);
   const utils = api.useUtils();
 
@@ -54,7 +55,11 @@ export function EditableCell({
   }, [initialValue, cellKey]);
 
   const virtualizer = useTableVirtualizer();
-  const updateCell = api.row.updateCell.useMutation();
+  const updateCell = api.row.updateCell.useMutation({
+    onSettled: () => {
+      void utils.row.getByTable.invalidate({ tableId });
+    },
+  });
 
   const save = () => {
     if (value !== initialValue) {
@@ -137,25 +142,57 @@ export function EditableCell({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const directionMap: Record<string, "up" | "down" | "left" | "right"> = {
-      Enter: "down",
-      ArrowDown: "down",
-      ArrowUp: "up",
-      ArrowLeft: "left",
-      ArrowRight: "right",
-      Tab: "right",
-    };
-
-    const direction = directionMap[e.key];
-    if (direction) {
+    if (e.key === "Escape") {
+      if (editing) {
+        // Exit editing mode but stay focused/selected
+        setEditing(false);
+      } else {
+        // Exit cell entirely
+        setValue(initialValue);
+        e.currentTarget.blur();
+      }
       e.preventDefault();
-      navigate(e.currentTarget, direction);
       return;
     }
 
-    if (e.key === "Escape") {
-      setValue(initialValue);
-      e.currentTarget.blur();
+    // Enter editing mode on any printable key when selected but not editing
+    if (!editing && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      setEditing(true);
+      return;
+    }
+
+    // Enter starts editing if not already, otherwise navigates down
+    if (e.key === "Enter") {
+      if (!editing) {
+        setEditing(true);
+        e.preventDefault();
+      } else {
+        e.preventDefault();
+        navigate(e.currentTarget, "down");
+      }
+      return;
+    }
+
+    // Tab always navigates
+    if (e.key === "Tab") {
+      e.preventDefault();
+      navigate(e.currentTarget, e.shiftKey ? "left" : "right");
+      return;
+    }
+
+    // Arrow keys only navigate when not editing
+    if (!editing) {
+      const arrowMap: Record<string, "up" | "down" | "left" | "right"> = {
+        ArrowDown: "down",
+        ArrowUp: "up",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+      };
+      const direction = arrowMap[e.key];
+      if (direction) {
+        e.preventDefault();
+        navigate(e.currentTarget, direction);
+      }
     }
   };
 
@@ -183,17 +220,16 @@ export function EditableCell({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onFocus={() => setFocused(true)}
+        onClick={() => setEditing(true)}
         onBlur={() => {
           setFocused(false);
+          setEditing(false);
           if (navigatingRef.current) {
             navigatingRef.current = false;
             save();
             return;
           }
           save();
-          setTimeout(() => {
-            void utils.row.getByTable.invalidate({ tableId });
-          }, 300);
         }}
         onKeyDown={(e) => handleKeyDown(e)}
       />

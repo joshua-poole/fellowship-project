@@ -1,6 +1,5 @@
 import { TRPCError } from "@trpc/server";
 import { faker } from "@faker-js/faker";
-import { DbNull } from "@prisma/client-runtime-utils";
 import { rowId, rowIdFast } from "~/lib/ids";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
@@ -26,43 +25,6 @@ function numericIfPossible(value: string | number | undefined): string | number 
   if (typeof value === "number") return value;
   const n = Number(value);
   return !isNaN(n) && value.trim() !== "" ? n : value;
-}
-
-function buildFilterCondition(filter: RowFilter) {
-  const { columnId, operator, value } = filter;
-  const path = [columnId];
-
-  switch (operator) {
-    case "equals":
-      if (value == null) return {};
-      return { values: { path, equals: numericIfPossible(value) } };
-    case "contains":
-      if (value == null || value === "") return {};
-      return { values: { path, string_contains: String(value) } };
-    case "not_contains":
-      if (value == null || value === "") return {};
-      return { NOT: { values: { path, string_contains: String(value) } } };
-    case "gt":
-      if (value == null) return {};
-      return { values: { path, gt: numericIfPossible(value) } };
-    case "lt":
-      if (value == null) return {};
-      return { values: { path, lt: numericIfPossible(value) } };
-    case "is_empty":
-      return {
-        OR: [
-          { values: { path, equals: "" } },
-          { NOT: { values: { path, not: DbNull } } },
-        ],
-      };
-    case "is_not_empty":
-      return {
-        values: { path, not: "" },
-        AND: { values: { path, not: DbNull } },
-      };
-    default:
-      return {};
-  }
 }
 
 function buildRawFilterCondition(
@@ -138,7 +100,8 @@ export const rowRouter = createTRPCRouter({
         params.push(input.tableId);
         whereParts.push(`"tableId" = $${params.length}`);
 
-        if (input.cursor != null) {
+        // Only use cursor-based WHERE when not sorting (order field is sequential)
+        if (input.cursor != null && !hasSorts) {
           params.push(input.cursor.order);
           whereParts.push(`"order" > $${params.length}`);
         }
@@ -157,18 +120,28 @@ export const rowRouter = createTRPCRouter({
 
         const orderParts = (input.sorts ?? []).map((s) => {
           // columnId is system-generated cuid, direction validated by zod — safe to interpolate
-          return `"values"->>'${s.columnId}' ${s.direction === "desc" ? "DESC" : "ASC"}`;
+          // NULLS FIRST for ASC so empty cells appear before content (matching Airtable behavior)
+          return `NULLIF("values"->>'${s.columnId}', '') ${s.direction === "desc" ? "DESC NULLS LAST" : "ASC NULLS FIRST"}`;
         });
         orderParts.push(`"order" ASC`);
 
         params.push(limit + 1);
+        const limitParamIdx = params.length;
+
+        // When sorting, use OFFSET-based pagination (cursor.order carries the offset)
+        let offsetClause = "";
+        if (hasSorts && input.cursor != null) {
+          params.push(input.cursor.order);
+          offsetClause = `OFFSET $${params.length}`;
+        }
 
         const query = `
           SELECT "id", "order", "values"
           FROM "Row"
           WHERE ${whereParts.join(" AND ")}
           ORDER BY ${orderParts.join(", ")}
-          LIMIT $${params.length}
+          LIMIT $${limitParamIdx}
+          ${offsetClause}
         `;
 
         const rawRows = await ctx.db.$queryRawUnsafe<
@@ -178,7 +151,13 @@ export const rowRouter = createTRPCRouter({
         let nextCursor: { order: number; limit: number } | undefined;
         if (rawRows.length > limit) {
           rawRows.pop();
-          nextCursor = { order: rawRows[rawRows.length - 1]!.order, limit };
+          if (hasSorts) {
+            // For sorted queries, cursor.order is the offset for the next page
+            const currentOffset = input.cursor?.order ?? 0;
+            nextCursor = { order: currentOffset + limit, limit };
+          } else {
+            nextCursor = { order: rawRows[rawRows.length - 1]!.order, limit };
+          }
         }
 
         return {

@@ -74,6 +74,7 @@ export const columnRouter = createTRPCRouter({
           id: columnId(),
           order: newOrder,
         },
+        select: { id: true, name: true, type: true, order: true },
       });
     }),
 
@@ -96,6 +97,7 @@ export const columnRouter = createTRPCRouter({
       return await ctx.db.column.update({
         where: { id },
         data,
+        select: { id: true, name: true, type: true, order: true },
       });
     }),
 
