@@ -41,6 +41,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "~/components/ui/select";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverAnchor,
+  PopoverContent,
+} from "~/components/ui/popover";
 import { rowId } from "~/lib/ids";
 import { type RowGetByTableInputSchema } from '../types/row';
 import type z from "zod";
@@ -82,7 +95,12 @@ interface VirtualizedTableProps {
   onHideColumn?: (columnId: string) => void;
 }
 
-type TableQueryInput =z.infer<typeof RowGetByTableInputSchema>;
+type TableQueryInput = z.infer<typeof RowGetByTableInputSchema>;
+
+const COLUMN_TYPES = [
+  { value: "TEXT", label: "Text", icon: ALargeSmall },
+  { value: "NUMBER", label: "Number", icon: Hash },
+] as const;
 
 const ROW_HEIGHT = 32;
 const PAGE_LIMITS = [2000, 10000, 50000];
@@ -266,7 +284,8 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
     },
   });
 
-  const [renamingColumnId, setRenamingColumnId] = useState<string | null>(null);
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+  const [addColumnOpen, setAddColumnOpen] = useState(false);
 
   const fetchMoreOnBottomReached = useCallback(
     (containerRefElement?: HTMLDivElement | null) => {
@@ -359,29 +378,11 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
         columnHelper.accessor((row) => row.values[col.id] ?? "", {
           id: col.id,
           header: () => (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="group/header flex items-center w-full h-full overflow-hidden px-2 cursor-pointer">
-                  {renamingColumnId === col.id ? (
-                    <input
-                      autoFocus
-                      defaultValue={col.name}
-                      className="flex-1 min-w-0 text-xs font-medium outline-none bg-transparent border-2 border-blue-500 rounded px-1 -mx-1"
-                      onClick={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onBlur={(e) => {
-                        const val = e.currentTarget.value.trim();
-                        if (val && val !== col.name) updateColumn.mutate({ id: col.id, name: val });
-                        setRenamingColumnId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.key === "Enter") e.currentTarget.blur();
-                        if (e.key === "Escape") setRenamingColumnId(null);
-                      }}
-                    />
-                  ) : (
-                    <>
+            <Popover open={editingColumnId === col.id} onOpenChange={(open) => { if (!open) setEditingColumnId(null); }}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <PopoverAnchor asChild>
+                    <div className="group/header flex items-center w-full h-full overflow-hidden px-2 cursor-pointer">
                       {col.type === "NUMBER"
                         ? <Hash className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
                         : <ALargeSmall className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
@@ -390,79 +391,91 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
                       <button className="invisible group-hover/header:visible flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10">
                         <ChevronDown className="h-3 w-3 text-gray-500" />
                       </button>
-                    </>
-                  )}
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" side="bottom" className="w-60">
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => requestAnimationFrame(() => setRenamingColumnId(col.id))}>
-                  <Pencil className="h-4 w-4" /> Edit field
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                  <Copy className="h-4 w-4" /> Duplicate field
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer gap-3 px-3 py-2"
-                  disabled={isFirstCol}
-                  onClick={() => createColumn.mutate({ tableId, name: `Field ${columns.length + 1}`, type: "TEXT", order: col.order })}
-                >
-                  <ArrowLeft className="h-4 w-4" /> Insert left
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer gap-3 px-3 py-2"
-                  onClick={() => createColumn.mutate({ tableId, name: `Field ${columns.length + 1}`, type: "TEXT", order: col.order + 1 })}
-                >
-                  <ArrowRight className="h-4 w-4" /> Insert right
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" disabled={!isFirstCol}>
-                  <AlignStartVertical className="h-4 w-4" /> Change primary field
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                  <LinkIcon className="h-4 w-4" /> Copy field URL
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                  <Info className="h-4 w-4" /> Edit field description
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                  <Lock className="h-4 w-4" /> Edit field permissions
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddSort?.(col.id, "asc")}>
-                  <ArrowDownAZ className="h-4 w-4" /> Sort A → Z
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddSort?.(col.id, "desc")}>
-                  <ArrowUpZA className="h-4 w-4" /> Sort Z → A
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddFilter?.(col.id)}>
-                  <ListFilter className="h-4 w-4" /> Filter by this field
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                  <Group className="h-4 w-4" /> Group by this field
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                  <GitBranch className="h-4 w-4" /> Show dependencies
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2 text-gray-400" onClick={() => onHideColumn?.(col.id)}>
-                  <EyeOff className="h-4 w-4" /> Hide field
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer gap-3 px-3 py-2 text-red-500 focus:text-red-500"
-                  onClick={() => deleteColumn.mutate({ id: col.id })}
-                >
-                  <Trash2 className="h-4 w-4" /> Delete field
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    </div>
+                  </PopoverAnchor>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="bottom" className="w-60">
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => requestAnimationFrame(() => setEditingColumnId(col.id))}>
+                    <Pencil className="h-4 w-4" /> Edit field
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                    <Copy className="h-4 w-4" /> Duplicate field
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-3 px-3 py-2"
+                    disabled={isFirstCol}
+                    onClick={() => createColumn.mutate({ tableId, name: `Field ${columns.length + 1}`, type: "TEXT", order: col.order })}
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Insert left
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-3 px-3 py-2"
+                    onClick={() => createColumn.mutate({ tableId, name: `Field ${columns.length + 1}`, type: "TEXT", order: col.order + 1 })}
+                  >
+                    <ArrowRight className="h-4 w-4" /> Insert right
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" disabled={!isFirstCol}>
+                    <AlignStartVertical className="h-4 w-4" /> Change primary field
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                    <LinkIcon className="h-4 w-4" /> Copy field URL
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                    <Info className="h-4 w-4" /> Edit field description
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                    <Lock className="h-4 w-4" /> Edit field permissions
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddSort?.(col.id, "asc")}>
+                    <ArrowDownAZ className="h-4 w-4" /> Sort A → Z
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddSort?.(col.id, "desc")}>
+                    <ArrowUpZA className="h-4 w-4" /> Sort Z → A
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddFilter?.(col.id)}>
+                    <ListFilter className="h-4 w-4" /> Filter by this field
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                    <Group className="h-4 w-4" /> Group by this field
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                    <GitBranch className="h-4 w-4" /> Show dependencies
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2 text-gray-400" onClick={() => onHideColumn?.(col.id)}>
+                    <EyeOff className="h-4 w-4" /> Hide field
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-3 px-3 py-2 text-red-500 focus:text-red-500"
+                    onClick={() => deleteColumn.mutate({ id: col.id })}
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete field
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <PopoverContent align="start" className="w-64 p-3 flex flex-col gap-3">
+                <ColumnFieldForm
+                  defaultName={col.name}
+                  defaultType={col.type as ColumnTypeValue}
+                  onSave={(name, type) => {
+                    updateColumn.mutate({ id: col.id, name, type });
+                    setEditingColumnId(null);
+                  }}
+                  onCancel={() => setEditingColumnId(null)}
+                />
+              </PopoverContent>
+            </Popover>
           ),
           cell: (info) => (
             <EditableCell
               tableId={tableId}
               rowId={info.row.original.id}
               columnId={col.id}
+              columnType={col.type}
               initialValue={String(info.getValue())}
               isFirstCol={isFirstCol}
               isLastCol={isLastCol}
@@ -479,9 +492,23 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
       columnHelper.display({
         id: "_addCol",
         header: () => (
-          <div className="flex items-center justify-center w-23.5 h-8 cursor-pointer" onClick={() => createColumn.mutate({ tableId, name: `Column ${columns.length + 1}`, type: "TEXT" })}>
-            <Plus className="h-4 w-4" />
-          </div>
+          <Popover open={addColumnOpen} onOpenChange={setAddColumnOpen}>
+            <PopoverTrigger asChild>
+              <div className="flex items-center justify-center w-23.5 h-8 cursor-pointer hover:bg-gray-100">
+                <Plus className="h-4 w-4" />
+              </div>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-3 flex flex-col gap-3">
+              <ColumnFieldForm
+                defaultName={`Field ${columns.length + 1}`}
+                onSave={(name, type) => {
+                  createColumn.mutate({ tableId, name, type });
+                  setAddColumnOpen(false);
+                }}
+                onCancel={() => setAddColumnOpen(false)}
+              />
+            </PopoverContent>
+          </Popover>
         ),
         cell: () => null,
         size: 94,
@@ -489,7 +516,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
     );
 
     return cols;
-  }, [columns, columnHelper, tableId, selectedRows, createColumn, rows, deleteColumn, onAddFilter, onAddSort, onHideColumn, renamingColumnId, updateColumn]);
+  }, [columns, columnHelper, tableId, selectedRows, createColumn, rows, deleteColumn, onAddFilter, onAddSort, onHideColumn, editingColumnId, updateColumn, addColumnOpen]);
 
   const table = useReactTable({
     data: rows,
@@ -622,8 +649,74 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
       <div className="flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-7">
         <BulkCreateInput queryInput={queryInput} />
       </div>
+
     </div>
     </TableVirtualizerContext.Provider>
+  );
+}
+
+type ColumnTypeValue = typeof COLUMN_TYPES[number]["value"];
+
+function ColumnFieldForm({
+  defaultName,
+  defaultType,
+  onSave,
+  onCancel,
+}: {
+  defaultName: string;
+  defaultType?: ColumnTypeValue;
+  onSave: (name: string, type: ColumnTypeValue) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(defaultName);
+  const [type, setType] = useState<ColumnTypeValue>(defaultType ?? "TEXT");
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    onSave(name.trim(), type);
+  };
+
+  return (
+    <>
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSave();
+          if (e.key === "Escape") onCancel();
+        }}
+        placeholder="Field name"
+        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+      />
+      <Select value={type} onValueChange={(v) => setType(v as ColumnTypeValue)}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {COLUMN_TYPES.map((ct) => (
+            <SelectItem key={ct.value} value={ct.value}>
+              <ct.icon className="h-3.5 w-3.5 inline-block mr-2 text-gray-500" />
+              {ct.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="flex justify-end gap-2">
+        <button
+          className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          className="px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+          onClick={handleSave}
+        >
+          Save
+        </button>
+      </div>
+    </>
   );
 }
 

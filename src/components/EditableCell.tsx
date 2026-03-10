@@ -13,6 +13,7 @@ interface EditableCellProps {
   tableId: string;
   rowId: string;
   columnId: string;
+  columnType: string;
   initialValue: string;
   isFirstRow?: boolean;
   isFirstCol?: boolean;
@@ -23,6 +24,7 @@ export function EditableCell({
   tableId,
   rowId,
   columnId,
+  columnType,
   initialValue,
   isFirstRow,
   isFirstCol,
@@ -64,7 +66,8 @@ export function EditableCell({
   const save = () => {
     if (value !== initialValue) {
       pendingEdits.set(cellKey, value);
-      updateCell.mutate({ rowId, columnId, value });
+      const coerced = columnType === "NUMBER" && value !== "" ? Number(value) : value;
+      updateCell.mutate({ rowId, columnId, value: coerced });
     }
   };
 
@@ -217,8 +220,13 @@ export function EditableCell({
       <input
         data-col-id={columnId}
         className={`w-full bg-transparent outline-none truncate ${focused ? "text-[rgb(22,110,225)]" : ""}`}
+        inputMode={columnType === "NUMBER" ? "decimal" : "text"}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (columnType === "NUMBER" && v !== "" && !/^-?\d*\.?\d*$/.test(v)) return;
+          setValue(v);
+        }}
         onFocus={() => setFocused(true)}
         onClick={() => setEditing(true)}
         onBlur={() => {

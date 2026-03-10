@@ -285,11 +285,32 @@ export const rowRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Row not found" });
       }
 
+      // Validate value against column type
+      const column = await ctx.db.column.findFirst({
+        where: { id: input.columnId, tableId: row.tableId },
+        select: { type: true },
+      });
+
+      if (!column) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Column not found" });
+      }
+
+      let cellValue = input.value;
+      if (column.type === "NUMBER" && cellValue !== null) {
+        if (typeof cellValue === "string" && cellValue !== "") {
+          const num = Number(cellValue);
+          if (isNaN(num)) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Value must be a number" });
+          }
+          cellValue = num;
+        }
+      }
+
       const values = castValues(row.values);
-      if (input.value === null) {
+      if (cellValue === null || cellValue === "") {
         delete values[input.columnId];
       } else {
-        values[input.columnId] = input.value;
+        values[input.columnId] = cellValue;
       }
 
       const updated = await ctx.db.row.update({
