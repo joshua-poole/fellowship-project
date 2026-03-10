@@ -6,11 +6,16 @@ import { api } from "~/trpc/react";
 // Survives component remounts — stores edited values until server data catches up
 const pendingEdits = new Map<string, string>();
 
+const BORDER_COLOR = "rgb(22, 110, 225)";
+
 interface EditableCellProps {
   tableId: string;
   rowId: string;
   columnId: string;
   initialValue: string;
+  isFirstRow?: boolean;
+  isFirstCol?: boolean;
+  isLastCol?: boolean;
 }
 
 export function EditableCell({
@@ -18,6 +23,9 @@ export function EditableCell({
   rowId,
   columnId,
   initialValue,
+  isFirstRow,
+  isFirstCol,
+  isLastCol,
 }: EditableCellProps) {
   const cellKey = `${rowId}:${columnId}`;
 
@@ -102,7 +110,6 @@ export function EditableCell({
     navigatingRef.current = true;
     if (!focusAdjacentCell(input, direction)) {
       navigatingRef.current = false;
-      input.blur();
     }
   };
 
@@ -130,27 +137,43 @@ export function EditableCell({
   };
 
   return (
-    <input
-      data-col-id={columnId}
-      className={`w-full bg-transparent outline-none truncate ${
-        focused ? "ring-1 ring-blue-500 rounded-sm px-0.5 -mx-0.5" : ""
-      }`}
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onFocus={() => setFocused(true)}
-      onBlur={() => {
-        setFocused(false);
-        if (navigatingRef.current) {
-          navigatingRef.current = false;
+    <>
+      {focused && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: isFirstRow ? 0 : -2,
+            bottom: -2,
+            left: isFirstCol ? 0 : -2,
+            right: isLastCol ? 0 : -2,
+            borderTop: isFirstRow ? "none" : `2px solid ${BORDER_COLOR}`,
+            borderBottom: `2px solid ${BORDER_COLOR}`,
+            borderLeft: isFirstCol ? "none" : `2px solid ${BORDER_COLOR}`,
+            borderRight: isLastCol ? "none" : `2px solid ${BORDER_COLOR}`,
+            zIndex: 10,
+          }}
+        />
+      )}
+      <input
+        data-col-id={columnId}
+        className={`w-full bg-transparent outline-none truncate ${focused ? "text-[rgb(22,110,225)]" : ""}`}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          if (navigatingRef.current) {
+            navigatingRef.current = false;
+            save();
+            return;
+          }
           save();
-          return;
-        }
-        save();
-        setTimeout(() => {
-          void utils.row.getByTable.invalidate({ tableId });
-        }, 300);
-      }}
-      onKeyDown={(e) => handleKeyDown(e)}
-    />
+          setTimeout(() => {
+            void utils.row.getByTable.invalidate({ tableId });
+          }, 300);
+        }}
+        onKeyDown={(e) => handleKeyDown(e)}
+      />
+    </>
   );
 }

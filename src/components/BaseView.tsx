@@ -147,7 +147,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
   }
 
   return (
-    <main className="h-screen w-screen flex">
+    <main className="h-screen w-screen flex overflow-hidden">
       {/* ═══ Sidebar ═══ */}
       <aside className="flex shrink-0 flex-col items-center justify-between bg-white border-r border-(--colors-border-default) py-2 px-2" style={{ width: 56 }}>
         <div className="flex flex-col items-center gap-1">
@@ -206,7 +206,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
       {/* ═══ Main Area ═══ */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* ─── Navbar ─── */}
-        <div className="flex items-center justify-between border-b border-(--colors-border-default) pl-4 shrink-0" style={{ height: 56 }}>
+        <div className="flex items-center justify-between border-b border-(--colors-border-default) pl-4 shrink-0 w-full" style={{ height: 56 }}>
           <div className="flex items-center gap-2">
             <div className={`flex h-8 w-8 items-center justify-center rounded-[6px] ${hashColor(baseId, BASE_COLORS)} [&_path]:fill-white! border border-(--colors-border-default)`}>
               <span className="[&_svg]:w-6 [&_svg]:h-[20.4px]"><LogoIcon /></span>
@@ -249,7 +249,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         </div>
 
         {/* ─── Table Tabs Bar ─── */}
-        <div className="relative flex items-center justify-between bg-[#f1f5ff] shrink-0 border-b border-(--colors-border-default)" style={{ height: 32 }}>
+        <div className="relative flex items-center justify-between bg-[#f1f5ff] shrink-0 border-b border-(--colors-border-default) w-full" style={{ height: 32 }}>
           <div className="flex items-stretch h-full overflow-visible">
             {base.tables.map((t, index) => {
               const isActive = t.id === activeTableId;
@@ -318,13 +318,13 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </button>
             <button
-              className="flex items-center gap-1 px-1.5 transition-colors cursor-pointer"
+              className="group flex items-center gap-1 px-1.5 transition-colors cursor-pointer"
               onClick={() => createTable.mutate({ baseId })}
               disabled={createTable.isPending}
               style={{ height: 32 }}
             >
-              <Plus className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-500 ml-1">Add or import</span>
+              <Plus className="h-4 w-4 text-gray-500 group-hover:text-black transition-colors" />
+              <span className="text-sm text-gray-500 group-hover:text-black ml-1 transition-colors">Add or import</span>
             </button>
           </div>
 
@@ -362,7 +362,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         </div>
 
         {/* ─── Views Sidebar + Grid ─── */}
-        <div className="flex flex-1 min-h-0">
+        <div className="flex flex-1 min-h-0 min-w-0">
           {/* Views Sidebar */}
           <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-1 py-1.25" style={{ width: 280 }}>
             {/* Create button */}
@@ -416,7 +416,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
           </div>
 
           {/* Grid */}
-          <div className="h-full w-full">
+          <div className="h-full min-w-0 flex-1">
             {activeTableId && (
               <VirtualizedTable tableId={activeTableId} columns={columns} />
             )}

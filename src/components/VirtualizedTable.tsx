@@ -135,7 +135,11 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
           const toggle = () =>
             setSelectedRows((prev) => {
               const next = new Set(prev);
-              isSelected ? next.delete(row.original.id) : next.add(row.original.id);
+              if (isSelected) {
+                next.delete(row.original.id);
+              } else {
+                next.add(row.original.id);
+              }
               return next;
             });
           return (
@@ -164,7 +168,10 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
       }) as ColumnDef<RowData, unknown>,
     ];
 
-    for (const col of columns) {
+    for (let i = 0; i < columns.length; i++) {
+      const col = columns[i]!;
+      const isFirstCol = i === 0;
+      const isLastCol = i === columns.length - 1;
       cols.push(
         columnHelper.accessor((row) => row.values[col.id] ?? "", {
           id: col.id,
@@ -182,6 +189,9 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
               rowId={info.row.original.id}
               columnId={col.id}
               initialValue={String(info.getValue())}
+              isFirstCol={isFirstCol}
+              isLastCol={isLastCol}
+              isFirstRow={info.row.index === 0}
             />
           ),
           size: 180,
@@ -204,7 +214,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
     );
 
     return cols;
-  }, [columns, columnHelper, tableId, rows, selectedRows]);
+  }, [columns, columnHelper, tableId, rows, selectedRows, createColumn]);
 
   const table = useReactTable({
     data: rows,
@@ -213,6 +223,11 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
   });
 
   const { rows: tableRows } = table.getRowModel();
+
+  const dataColumnsWidth = table
+    .getAllColumns()
+    .filter((col) => col.id !== "_addCol")
+    .reduce((sum, col) => sum + col.getSize(), 0);
 
   const rowVirtualizer = useVirtualizer({
     count: tableRows.length,
@@ -279,7 +294,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
                   data-index={virtualRow.index}
                   ref={(node) => rowVirtualizer.measureElement(node)}
                   key={row.id}
-                  className={`group/row ${isSelected ? "bg-blue-50" : "hover:bg-gray-50/80"} bg-[#f6f8fc]`}
+                  className={`group/row ${isSelected ? "bg-blue-50" : "hover:bg-gray-50/80"} bg-[#f6f8fc] focus-within:z-10`}
                   style={{
                     display: "flex",
                     position: "absolute",
@@ -291,7 +306,7 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
                   {row.getVisibleCells().filter((cell) => cell.column.id !== "_addCol").map((cell, colIndex) => (
                     <td
                       key={cell.id}
-                      className={`border-b border-r border-(--colors-border-default) shrink-0 overflow-hidden ${colIndex === 0 ? "p-0" : "flex items-center px-1.5"} bg-white`}
+                      className={`border-b border-r border-(--colors-border-default) focus-within:border-transparent shrink-0 ${colIndex === 0 ? "p-0 overflow-hidden" : "flex items-center px-1.5"} bg-white relative`}
                       style={{ display: "flex", width: cell.column.getSize(), height: ROW_HEIGHT }}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -301,40 +316,12 @@ export function VirtualizedTable({ tableId, columns }: VirtualizedTableProps) {
               );
             })}
           </tbody>
-
-
-          {/* TODO: ensure that the ghost row goes at the bottom of the table instead of a div, or maybe is even the width of the table somehow */}
-          {/* <tfoot>
-            <tr className="w-full bg-white flex">
-              <td >
-                test
-              </td>
-            </tr>
-          </tfoot> */}
-          <tfoot
-            style={{ display: "grid" }}
-            className="sticky bottom-0 z-1 bg-[#f6f8fc]"
-          >
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="border-b border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50 bg-white"
-                    style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT }}
-                  >
-                    {/* {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())} */}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </tfoot>
         </table>
 
         {/* Ghost / add row */}
         <div
-          className="flex items-center border-b border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors bg-white"
-          style={{ height: ROW_HEIGHT }}
+          className="flex items-center border-b border-r border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors bg-white"
+          style={{ height: ROW_HEIGHT, width: dataColumnsWidth }}
           onClick={() => createRow.mutate({ tableId })}
         >
           <div className="shrink-0 border-r border-(--colors-border-default) h-full w-21">
