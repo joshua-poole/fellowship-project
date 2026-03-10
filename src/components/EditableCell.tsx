@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { api } from "~/trpc/react";
+import { useTableVirtualizer } from "~/components/VirtualizedTable";
 
 // Survives component remounts — stores edited values until server data catches up
 const pendingEdits = new Map<string, string>();
@@ -52,6 +53,7 @@ export function EditableCell({
     }
   }, [initialValue, cellKey]);
 
+  const virtualizer = useTableVirtualizer();
   const updateCell = api.row.updateCell.useMutation();
 
   const save = () => {
@@ -60,6 +62,16 @@ export function EditableCell({
       updateCell.mutate({ rowId, columnId, value });
     }
   };
+
+  const focusCellAtIndex = useCallback((container: Element, targetIndex: number) => {
+    const targetRow = container.querySelector<HTMLElement>(`tr[data-index="${targetIndex}"]`);
+    const nextInput = targetRow?.querySelector<HTMLInputElement>(`input[data-col-id="${columnId}"]`);
+    if (nextInput) {
+      nextInput.focus();
+      return true;
+    }
+    return false;
+  }, [columnId]);
 
   const focusAdjacentCell = (
     current: HTMLInputElement,
@@ -90,16 +102,27 @@ export function EditableCell({
 
     const targetIndex =
       direction === "down" ? currentIndex + 1 : currentIndex - 1;
-    const targetRow = container.querySelector<HTMLElement>(
-      `tr[data-index="${targetIndex}"]`,
-    );
-    const nextInput = targetRow?.querySelector<HTMLInputElement>(
-      `input[data-col-id="${columnId}"]`,
-    );
-    if (nextInput) {
-      nextInput.focus();
+
+    if (targetIndex < 0 || (virtualizer && targetIndex >= virtualizer.rowCount)) {
+      return false;
+    }
+
+    // Try to focus directly if the row is already rendered
+    if (focusCellAtIndex(container, targetIndex)) {
       return true;
     }
+
+    // Row isn't rendered — scroll to it and retry after render
+    if (virtualizer) {
+      virtualizer.scrollToIndex(targetIndex);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          focusCellAtIndex(container, targetIndex);
+        });
+      });
+      return true;
+    }
+
     return false;
   };
 

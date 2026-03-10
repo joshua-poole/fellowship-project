@@ -32,7 +32,16 @@ export const tableRouter = createTRPCRouter({
             orderBy: { order: "asc" },
           },
           views: {
-            select: { id: true, name: true, type: true, order: true },
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              order: true,
+              search: true,
+              filters: { select: { id: true, columnId: true, operator: true, value: true } },
+              sorts: { select: { id: true, columnId: true, direction: true, order: true }, orderBy: { order: "asc" as const } },
+              hiddenColumns: { select: { id: true, columnId: true } },
+            },
             orderBy: { order: "asc" },
           },
         },

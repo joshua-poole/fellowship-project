@@ -8,8 +8,11 @@ const CellValuesSchema = z.record(z.string(), z.union([z.string(), z.number()]))
 
 export const RowGetByTableInputSchema = z.object({
   tableId: z.string(),
-  cursor: z.number().int().optional(),
-  limit: z.number().int().min(1).max(5000).default(100),
+  cursor: z.object({
+    order: z.number().int(),
+    limit: z.number().int().min(1).max(50000),
+  }).optional(),
+  limit: z.number().int().min(1).max(50000).default(2000),
   search: z.string().optional(),
   sorts: z
     .array(
@@ -47,7 +50,10 @@ export const RowGetByTableOutputSchema = z.object({
       values: CellValuesSchema,
     }),
   ),
-  nextCursor: z.number().int().optional(),
+  nextCursor: z.object({
+    order: z.number().int(),
+    limit: z.number().int(),
+  }).optional(),
 });
 
 export const RowCreateInputSchema = z.object({

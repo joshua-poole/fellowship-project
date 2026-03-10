@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { authClient, signOut } from "~/server/better-auth/client";
@@ -15,9 +15,7 @@ import {
   ChevronDown,
   CircleQuestionMark,
   EyeOff,
-  ListFilter,
   Group,
-  ArrowDownUp,
   PaintBucket,
   ExternalLink,
   MoreHorizontal,
@@ -34,6 +32,7 @@ import {
   Palette,
   Mail,
   CircleStar,
+  Star,
   Trash2,
   LogOut,
   Pencil,
@@ -52,7 +51,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "~/components/ui/popover";
 import { VirtualizedTable } from "./VirtualizedTable";
+import { SearchBar, FilterPopover, SortPopover, HideFieldsPopover, type FilterConfig, type SortConfig } from "./ViewToolbar";
 
 /* ─── color helpers ─── */
 const BASE_COLORS = [
@@ -86,6 +91,8 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
 
   const [activeTableId, setActiveTableIdState] = useState<string | undefined>(tableId);
   const [activeTab, setActiveTab] = useState("Data");
+  const [basePopoverOpen, setBasePopoverOpen] = useState(false);
+  const [viewsSidebarOpen, setViewsSidebarOpen] = useState(true);
 
   const setActiveTableId = useCallback((id: string | undefined) => {
     setActiveTableIdState(id);
@@ -103,7 +110,15 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
     { enabled: !!activeTableId },
   );
 
-  const activeView = tableData?.views?.[0];
+  const [activeViewId, setActiveViewId] = useState<string | undefined>(undefined);
+  const activeView = tableData?.views?.find((v) => v.id === activeViewId) ?? tableData?.views?.[0];
+
+  // Set initial active view when table data loads or changes
+  useEffect(() => {
+    if (tableData?.views?.length && !tableData.views.some((v) => v.id === activeViewId)) {
+      setActiveViewId(tableData.views[0]!.id);
+    }
+  }, [tableData?.views, activeViewId]);
 
   // Update URL when active table/view changes (without triggering navigation)
   useEffect(() => {
@@ -115,6 +130,22 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
   }, [activeTableId, activeView, baseId]);
 
   const utils = api.useUtils();
+  const renameBase = api.base.update.useMutation({
+    onMutate: async ({ id, name }) => {
+      await utils.base.getById.cancel({ id });
+      const prev = utils.base.getById.getData({ id });
+      utils.base.getById.setData({ id }, (old) => old ? { ...old, name } : old);
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.base.getById.setData({ id: baseId }, ctx.prev);
+    },
+    onSettled: () => void utils.base.getById.invalidate({ id: baseId }),
+  });
+
+  const deleteBase = api.base.delete.useMutation({
+    onSuccess: () => router.push("/"),
+  });
 
   const createTable = api.table.create.useMutation({
     onSuccess: () => utils.base.getById.invalidate({ id: baseId }),
@@ -127,7 +158,174 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
     },
   });
 
+  const tableQueryKey = { id: activeTableId! };
+
+  const createView = api.view.create.useMutation({
+    onMutate: async (input) => {
+      if (!activeTableId) return;
+      await utils.table.getById.cancel(tableQueryKey);
+      const prev = utils.table.getById.getData(tableQueryKey);
+      const existingViews = prev?.views ?? [];
+      const optimisticView = {
+        id: `viw_tmp_${Date.now()}`,
+        name: input.name ?? "Grid view",
+        type: "grid",
+        order: (existingViews[existingViews.length - 1]?.order ?? -1) + 1,
+        search: null,
+        filters: [],
+        sorts: [],
+        hiddenColumns: [],
+      };
+      utils.table.getById.setData(tableQueryKey, (old) =>
+        old ? { ...old, views: [...old.views, optimisticView] } : old,
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev && activeTableId) utils.table.getById.setData(tableQueryKey, ctx.prev);
+    },
+    onSettled: () => {
+      if (activeTableId) void utils.table.getById.invalidate(tableQueryKey);
+    },
+  });
+
+  const updateView = api.view.update.useMutation({
+    onMutate: async (input) => {
+      if (!activeTableId) return;
+      await utils.table.getById.cancel(tableQueryKey);
+      const prev = utils.table.getById.getData(tableQueryKey);
+      utils.table.getById.setData(tableQueryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          views: old.views.map((v) => {
+            if (v.id !== input.id) return v;
+            return {
+              ...v,
+              ...(input.name !== undefined && { name: input.name }),
+              ...(input.search !== undefined && { search: input.search }),
+              ...(input.filters !== undefined && {
+                filters: input.filters.map((f, i) => ({
+                  id: `vfl_tmp_${i}`,
+                  columnId: f.columnId,
+                  operator: f.operator,
+                  value: f.value ?? null,
+                })),
+              }),
+              ...(input.sorts !== undefined && {
+                sorts: input.sorts.map((s, i) => ({
+                  id: `vsr_tmp_${i}`,
+                  columnId: s.columnId,
+                  direction: s.direction,
+                  order: s.order ?? i,
+                })),
+              }),
+              ...(input.hiddenColumns !== undefined && {
+                hiddenColumns: input.hiddenColumns.map((colId, i) => ({
+                  id: `vhc_tmp_${i}`,
+                  columnId: colId,
+                })),
+              }),
+            };
+          }),
+        };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev && activeTableId) utils.table.getById.setData(tableQueryKey, ctx.prev);
+    },
+    onSettled: () => {
+      if (activeTableId) void utils.table.getById.invalidate(tableQueryKey);
+    },
+  });
+
+  const deleteView = api.view.delete.useMutation({
+    onMutate: async (input) => {
+      if (!activeTableId) return;
+      await utils.table.getById.cancel(tableQueryKey);
+      const prev = utils.table.getById.getData(tableQueryKey);
+      utils.table.getById.setData(tableQueryKey, (old) =>
+        old ? { ...old, views: old.views.filter((v) => v.id !== input.id) } : old,
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev && activeTableId) utils.table.getById.setData(tableQueryKey, ctx.prev);
+    },
+    onSettled: () => {
+      if (activeTableId) void utils.table.getById.invalidate(tableQueryKey);
+    },
+  });
+
+  const [renamingViewId, setRenamingViewId] = useState<string | null>(null);
+
   const columns = useMemo(() => tableData?.columns ?? [], [tableData?.columns]);
+
+  // Toolbar state — synced from active view
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<FilterConfig[]>([]);
+  const [sorts, setSorts] = useState<SortConfig[]>([]);
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+
+  // Load state from active view when it changes
+  useEffect(() => {
+    if (activeView) {
+      setSearch(activeView.search ?? "");
+      setFilters(activeView.filters?.map((f) => ({
+        columnId: f.columnId,
+        operator: f.operator as FilterConfig["operator"],
+        value: f.value ?? null,
+      })) ?? []);
+      setSorts(activeView.sorts?.map((s) => ({
+        columnId: s.columnId,
+        direction: s.direction as SortConfig["direction"],
+      })) ?? []);
+      setHiddenColumns(activeView.hiddenColumns?.map((h) => h.columnId) ?? []);
+    }
+  }, [activeView?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist toolbar changes back to the active view
+  const saveViewConfig = useCallback((update: {
+    search?: string;
+    filters?: FilterConfig[];
+    sorts?: SortConfig[];
+    hiddenColumns?: string[];
+  }) => {
+    if (!activeView) return;
+    updateView.mutate({
+      id: activeView.id,
+      ...(update.search !== undefined && { search: update.search || null }),
+      ...(update.filters !== undefined && {
+        filters: update.filters.map((f) => ({
+          columnId: f.columnId,
+          operator: f.operator as "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt",
+          value: f.value ?? null,
+        })),
+      }),
+      ...(update.sorts !== undefined && {
+        sorts: update.sorts.map((s, i) => ({
+          columnId: s.columnId,
+          direction: s.direction,
+          order: i,
+        })),
+      }),
+      ...(update.hiddenColumns !== undefined && { hiddenColumns: update.hiddenColumns }),
+    });
+  }, [activeView, updateView]);
+
+  const handleSearchChange = useCallback((v: string) => { setSearch(v); saveViewConfig({ search: v }); }, [saveViewConfig]);
+  const handleFiltersChange = useCallback((v: FilterConfig[]) => { setFilters(v); saveViewConfig({ filters: v }); }, [saveViewConfig]);
+  const handleSortsChange = useCallback((v: SortConfig[]) => { setSorts(v); saveViewConfig({ sorts: v }); }, [saveViewConfig]);
+  const handleHiddenColumnsChange = useCallback((v: string[]) => { setHiddenColumns(v); saveViewConfig({ hiddenColumns: v }); }, [saveViewConfig]);
+
+  const visibleColumns = useMemo(
+    () => {
+      const hiddenSet = new Set(hiddenColumns);
+      return columns.filter((c) => !hiddenSet.has(c.id));
+    },
+    [columns, hiddenColumns],
+  );
 
   /* ─── loading ─── */
   if (baseLoading) {
@@ -211,8 +409,25 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
             <div className={`flex h-8 w-8 items-center justify-center rounded-[6px] ${hashColor(baseId, BASE_COLORS)} [&_path]:fill-white! border border-(--colors-border-default)`}>
               <span className="[&_svg]:w-6 [&_svg]:h-[20.4px]"><LogoIcon /></span>
             </div>
-            <span className="truncate" style={{ lineHeight: "24px", fontWeight: 700, fontFamily: "var(--font-family-body)", fontSize: "var(--font-size-heading-small)", minWidth: 0, flex: "0 1 auto" }}>{base.name}</span>
-            <ChevronDown className="h-4 w-4 ml-1 text-gray-400" />
+            <Popover open={basePopoverOpen} onOpenChange={setBasePopoverOpen}>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 rounded px-1 -ml-1 transition-colors">
+                  <span className="truncate" style={{ lineHeight: "24px", fontWeight: 700, fontFamily: "var(--font-family-body)", fontSize: "var(--font-size-heading-small)", minWidth: 0, flex: "0 1 auto" }}>{base.name}</span>
+                  <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="start" className="w-96 p-0">
+                <BasePopoverPanel
+                  base={base}
+                  onRename={(name) => { renameBase.mutate({ id: baseId, name }); setBasePopoverOpen(false); }}
+                  onDelete={() => {
+                    if (confirm(`Delete "${base.name}"? This will delete all tables and data.`)) {
+                      deleteBase.mutate({ id: baseId });
+                    }
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <ul className="relative flex items-stretch justify-center gap-4 px-2 bg-(--colors-background-default) self-stretch">
@@ -289,7 +504,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
                         <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Lock className="h-4 w-4 mr-2" />Edit table permissions</DropdownMenuItem>
                         <DropdownMenuSeparator className="m-2 opacity-50" />
                         <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><X className="h-4 w-4 mr-2" />Clear data</DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0 text-red-600" onClick={() => deleteTable.mutate({ id: t.id })}><Trash2 className="h-4 w-4 mr-2" />Delete table</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0" onClick={() => { if (confirm(`Delete "${t.name}"? All data in this table will be lost.`)) deleteTable.mutate({ id: t.id }); }}><Trash2 className="h-4 w-4 mr-2" />Delete table</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
@@ -312,8 +527,6 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
             )}
             <button
               className="h-8 w-10 flex items-center gap-1 transition-colors px-3 cursor-pointer"
-              onClick={() => createTable.mutate({ baseId })}
-              disabled={createTable.isPending}
             >
               <ChevronDown className="h-4 w-4 text-gray-500" />
             </button>
@@ -338,7 +551,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         {/* ─── Views Bar ─── */}
         <div className="flex h-12 items-center justify-between border-b border-(--colors-border-default) shrink-0">
           <div className="pl-3 pr-2 flex items-center">
-            <button className="h-8 w-8 rounded-sm hover:bg-gray-100 mr-1 flex items-center justify-center" style={{ padding: 0 }}>
+            <button className="h-8 w-8 rounded-sm hover:bg-gray-100 mr-1 flex items-center justify-center cursor-pointer" style={{ padding: 0 }} onClick={() => setViewsSidebarOpen((o) => !o)}>
               <Menu className="h-4 w-4 text-gray-500" />
             </button>
             <button className="flex items-center gap-1 px-2 py-1 text-sm hover:bg-gray-100 rounded-sm">
@@ -348,27 +561,35 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
           </div>
 
           <div className="flex items-center gap-0.5 pr-2">
-            <ToolbarButton icon={EyeOff} label="Hide fields" />
-            <ToolbarButton icon={ListFilter} label="Filter" />
+            <HideFieldsPopover columns={columns} hiddenColumns={hiddenColumns} onHiddenColumnsChange={handleHiddenColumnsChange} />
+            <FilterPopover columns={columns} filters={filters} onFiltersChange={handleFiltersChange} />
             <ToolbarButton icon={Group} label="Group" />
-            <ToolbarButton icon={ArrowDownUp} label="Sort" />
+            <SortPopover columns={columns} sorts={sorts} onSortsChange={handleSortsChange} />
             <ToolbarButton icon={PaintBucket} label="Color" />
             <ToolbarButton icon={RowHeightIcon} label="" />
             <ToolbarButton icon={ExternalLink} label="Share and sync" />
-            <button className="p-1.5 rounded-sm hover:bg-gray-100 ml-2">
-              <Search className="h-3.5 w-3.5 text-gray-500" />
-            </button>
+            <SearchBar value={search} onChange={handleSearchChange} />
           </div>
         </div>
 
         {/* ─── Views Sidebar + Grid ─── */}
         <div className="flex flex-1 min-h-0 min-w-0">
           {/* Views Sidebar */}
-          <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-1 py-1.25" style={{ width: 280 }}>
+          {viewsSidebarOpen && <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-1 py-1.25" style={{ width: 280 }}>
             <div className="flex flex-col pb-2">
               {/* Create button */}
               <div className="flex-none pb-1">
-                <button className="w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md hover:bg-(--colors-background-selected-hover) cursor-pointer transition-colors">
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md hover:bg-(--colors-background-selected-hover) cursor-pointer transition-colors"
+                  onClick={() => {
+                    if (activeTableId) {
+                      const existingCount = tableData?.views?.length ?? 0;
+                      const name = existingCount === 0 ? "Grid view" : `Grid ${existingCount + 1}`;
+                      createView.mutate({ tableId: activeTableId, name });
+                    }
+                  }}
+                  disabled={createView.isPending}
+                >
                   <Plus className="h-4 w-4 shrink-0" />
                   <span className="truncate">Create new...</span>
                 </button>
@@ -398,6 +619,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
                     key={v.id}
                     role="option"
                     aria-selected={v.id === activeView?.id}
+                    onClick={() => setActiveViewId(v.id)}
                     className={`group relative flex items-center rounded-sm px-3 py-2 cursor-pointer transition-colors ${
                       v.id === activeView?.id
                         ? "bg-(--colors-background-selected)"
@@ -406,23 +628,88 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
                   >
                     <div className="flex flex-1 items-center gap-2 min-w-0">
                       <GridFeatureIcon className="h-4 w-4 shrink-0" style={{ color: "rgb(22, 110, 225)" }} />
-                      <span className={`truncate text-sm ${v.id === activeView?.id ? "font-semibold" : ""}`}>
-                        {v.name}
-                      </span>
+                      {renamingViewId === v.id ? (
+                        <input
+                          autoFocus
+                          defaultValue={v.name}
+                          className="flex-1 min-w-0 text-sm outline-none bg-transparent border-2 border-blue-500 rounded px-1 -mx-1"
+                          onBlur={(e) => {
+                            const val = e.currentTarget.value.trim();
+                            if (val && val !== v.name) updateView.mutate({ id: v.id, name: val });
+                            setRenamingViewId(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") e.currentTarget.blur();
+                            if (e.key === "Escape") setRenamingViewId(null);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span className={`truncate text-sm ${v.id === activeView?.id ? "font-semibold" : ""}`}>
+                          {v.name}
+                        </span>
+                      )}
                     </div>
-                    <button className="invisible group-hover:visible flex items-center justify-center h-5 w-5 rounded shrink-0 hover:bg-black/10">
-                      <MoreHorizontal className="h-3.5 w-3.5 text-gray-500" />
-                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="invisible group-hover:visible flex items-center justify-center h-5 w-5 rounded shrink-0 hover:bg-black/10 cursor-pointer">
+                          <MoreHorizontal className="h-3.5 w-3.5 text-gray-500" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent side="bottom" align="start" className="w-56">
+                        <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                          <Star className="h-4 w-4" />
+                          Add to &apos;My favorites&apos;
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => setRenamingViewId(v.id)}>
+                          <Pencil className="h-4 w-4" />
+                          Rename view
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                          <Copy className="h-4 w-4" />
+                          Duplicate view
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer gap-3 px-3 py-2 text-red-600 focus:text-red-600"
+                          disabled={(tableData?.views?.length ?? 0) <= 1}
+                          onClick={() => deleteView.mutate({ id: v.id })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete view
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </li>
                 ))}
               </ul>
             </div>
-          </div>
+          </div>}
 
           {/* Grid */}
           <div className="h-full min-w-0 flex-1">
             {activeTableId && (
-              <VirtualizedTable tableId={activeTableId} columns={columns} />
+              <VirtualizedTable
+                tableId={activeTableId}
+                columns={visibleColumns}
+                search={search || undefined}
+                filters={filters}
+                sorts={sorts}
+                onAddSort={(columnId, direction) => {
+                  const next = [...sorts.filter((s) => s.columnId !== columnId), { columnId, direction }];
+                  handleSortsChange(next);
+                }}
+                onAddFilter={(columnId) => {
+                  if (!filters.some((f) => f.columnId === columnId)) {
+                    handleFiltersChange([...filters, { columnId, operator: "contains", value: null }]);
+                  }
+                }}
+                onHideColumn={(columnId) => {
+                  if (!hiddenColumns.includes(columnId)) {
+                    handleHiddenColumnsChange([...hiddenColumns, columnId]);
+                  }
+                }}
+              />
             )}
           </div>
         </div>
@@ -436,6 +723,130 @@ function SidebarIcon({ icon: Icon }: { icon: React.ComponentType<{ className?: s
   return (
     <div className="flex items-center justify-center p-2 rounded-md cursor-pointer hover:bg-gray-100 transition-colors">
       <Icon className="h-4 w-4 text-gray-600" strokeWidth={1.5} />
+    </div>
+  );
+}
+
+const BASE_COLOR_GRID = [
+  // Light
+  ["#fce4ec", "#fbe9e7", "#fff3e0", "#f1f8e9", "#e0f2f1", "#e0f7fa", "#e3f2fd", "#fce4ec", "#f3e5f5", "#eceff1"],
+  // Medium
+  ["#e53935", "#e64a19", "#f9a825", "#2e7d32", "#00897b", "#00bcd4", "#1565c0", "#d81b60", "#7b1fa2", "#616161"],
+  // Dark
+  ["#880e4f", "#bf360c", "#f57f17", "#1b5e20", "#004d40", "#006064", "#0d47a1", "#ad1457", "#4a148c", "#424242"],
+];
+
+function BasePopoverPanel({
+  base,
+  onRename,
+  onDelete,
+}: {
+  base: { name: string };
+  onRename: (name: string) => void;
+  onDelete: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
+
+  return (
+    <div className="max-h-[80vh] overflow-y-auto">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+        <input
+          ref={inputRef}
+          defaultValue={base.name}
+          className="flex-1 text-xl font-bold outline-none bg-transparent rounded px-1 -mx-1 border-2 border-transparent focus:border-blue-500 transition-colors"
+          onBlur={(e) => {
+            const val = e.currentTarget.value.trim();
+            if (val && val !== base.name) onRename(val);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+        />
+        <button className="p-1 rounded hover:bg-gray-100">
+          <Star className="h-5 w-5 text-gray-400" />
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-1 rounded hover:bg-gray-100">
+              <MoreHorizontal className="h-5 w-5 text-gray-400" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="bottom" align="end" className="w-48">
+            <DropdownMenuItem onClick={() => inputRef.current?.focus()}>
+              <Pencil className="h-4 w-4" />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onDelete}>
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="border-t border-gray-200 mx-5" />
+
+      {/* Appearance */}
+      <div className="px-5 py-3">
+        <button
+          className="flex items-center gap-2 w-full cursor-pointer"
+          onClick={() => setAppearanceOpen(!appearanceOpen)}
+        >
+          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${appearanceOpen ? "" : "-rotate-90"}`} />
+          <span className="text-base font-bold">Appearance</span>
+        </button>
+
+        {appearanceOpen && (
+          <div className="mt-3">
+            <div className="flex gap-4 mb-3 border-b border-gray-200">
+              <span className="text-sm font-medium pb-2 border-b-2 border-blue-600 cursor-pointer">Color</span>
+              <span className="text-sm text-gray-400 pb-2 cursor-pointer hover:text-gray-600">Icon</span>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {BASE_COLOR_GRID.map((row, ri) => (
+                <div key={ri} className="flex gap-1.5">
+                  {row.map((color, ci) => (
+                    <button
+                      key={ci}
+                      className="h-6 w-6 rounded cursor-pointer hover:ring-2 hover:ring-gray-300 transition-all shrink-0"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-gray-200 mx-5" />
+
+      {/* Base guide */}
+      <div className="px-5 py-3 pb-5">
+        <button
+          className="flex items-center gap-2 w-full cursor-pointer"
+          onClick={() => setGuideOpen(!guideOpen)}
+        >
+          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${guideOpen ? "" : "-rotate-90"}`} />
+          <span className="text-base font-bold">Base guide</span>
+        </button>
+
+        {guideOpen && (
+          <div className="mt-3 text-sm text-gray-500 space-y-3">
+            <p>Use this space to share the goals and details of your base with your team.</p>
+            <p>Start by outlining your goal.</p>
+            <p>Next, share details about key information in your base:</p>
+            <p>This table contains...</p>
+            <p>This view shows...</p>
+            <p>This link contains...</p>
+            <p>Teammates will see this guide when they first open the base and can find it anytime by clicking the down arrow on the top of their screen.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

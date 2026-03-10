@@ -14,7 +14,6 @@ import {
   EyeOff,
   X,
   Plus,
-  Trash2,
 } from "lucide-react";
 
 type ColDef = { id: string; name: string; type: string };

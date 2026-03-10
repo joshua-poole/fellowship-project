@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect, createContext, useContext } from "react";
 import {
   type ColumnDef,
   flexRender,
@@ -12,13 +12,50 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "~/trpc/react";
 import { Skeleton } from "~/components/ui/skeleton";
 import { EditableCell } from "~/components/EditableCell";
-import { Plus, ChevronDown, Check } from "lucide-react";
+import {
+  Plus,
+  ChevronDown,
+  Check,
+  Pencil,
+  Copy,
+  ArrowLeft,
+  ArrowRight,
+  AlignStartVertical,
+  Link as LinkIcon,
+  Info,
+  Lock,
+  ArrowDownAZ,
+  ArrowUpZA,
+  ListFilter,
+  Group,
+  GitBranch,
+  EyeOff,
+  Trash2,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import { rowId } from "~/lib/ids";
 import { type RowGetByTableInputSchema } from '../types/row';
 import type z from "zod";
 
 type RowData = { id: string; order: number; values: Record<string, string | number> };
 type ColDef = { id: string; name: string; type: string; order: number };
+
+interface TableVirtualizerContextValue {
+  scrollToIndex: (index: number) => void;
+  rowCount: number;
+}
+
+const TableVirtualizerContext = createContext<TableVirtualizerContextValue | null>(null);
+
+export function useTableVirtualizer() {
+  return useContext(TableVirtualizerContext);
+}
 
 interface ViewFilter {
   columnId: string;
@@ -37,13 +74,17 @@ interface VirtualizedTableProps {
   search?: string;
   filters?: ViewFilter[];
   sorts?: ViewSort[];
+  onAddSort?: (columnId: string, direction: "asc" | "desc") => void;
+  onAddFilter?: (columnId: string) => void;
+  onHideColumn?: (columnId: string) => void;
 }
 
 type TableQueryInput =z.infer<typeof RowGetByTableInputSchema>;
 
 const ROW_HEIGHT = 32;
+const PAGE_LIMITS = [2000, 10000, 50000];
 
-export function VirtualizedTable({ tableId, columns, search, filters, sorts }: VirtualizedTableProps) {
+export function VirtualizedTable({ tableId, columns, search, filters, sorts, onAddSort, onAddFilter, onHideColumn }: VirtualizedTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
@@ -55,7 +96,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
       search?: string;
       filters?: { columnId: string; operator: "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt"; value?: string | number }[];
       sorts?: { columnId: string; direction: "asc" | "desc" }[];
-    } = { tableId, limit: 1000 };
+    } = { tableId, limit: PAGE_LIMITS[0]! };
 
     if (search) input.search = search;
 
@@ -84,7 +125,13 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
     isFetchingNextPage,
     isLoading,
   } = api.row.getByTable.useInfiniteQuery(queryInput, {
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage.nextCursor) return undefined;
+      const idx = Math.min(allPages.length, PAGE_LIMITS.length - 1);
+      const nextLimit = PAGE_LIMITS[idx] ?? PAGE_LIMITS[PAGE_LIMITS.length - 1] ?? 50000;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- tRPC infinite query types are unresolvable by ESLint
+      return { order: lastPage.nextCursor.order, limit: nextLimit };
+    },
   });
 
   const rows: RowData[] = useMemo(
@@ -127,10 +174,28 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
     },
   });
 
-  // TODO: imlpement properly
   const createColumn = api.column.create.useMutation({
-    onSuccess: () => void utils.column.getByTable.invalidate({ tableId }),
+    onSuccess: () => {
+      void utils.column.getByTable.invalidate({ tableId });
+      void utils.table.getById.invalidate({ id: tableId });
+    },
   });
+
+  const updateColumn = api.column.update.useMutation({
+    onSuccess: () => {
+      void utils.column.getByTable.invalidate({ tableId });
+      void utils.table.getById.invalidate({ id: tableId });
+    },
+  });
+
+  const deleteColumn = api.column.delete.useMutation({
+    onSuccess: () => {
+      void utils.column.getByTable.invalidate({ tableId });
+      void utils.table.getById.invalidate({ id: tableId });
+    },
+  });
+
+  const [renamingColumnId, setRenamingColumnId] = useState<string | null>(null);
 
   const fetchMoreOnBottomReached = useCallback(
     (containerRefElement?: HTMLDivElement | null) => {
@@ -223,12 +288,98 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
         columnHelper.accessor((row) => row.values[col.id] ?? "", {
           id: col.id,
           header: () => (
-            <div className="group/header flex items-center w-full h-full overflow-hidden px-2">
-              <span className="truncate font-medium text-xs text-gray-700 flex-1">{col.name}</span>
-              <button className="invisible group-hover/header:visible flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10">
-                <ChevronDown className="h-3 w-3 text-gray-500" />
-              </button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="group/header flex items-center w-full h-full overflow-hidden px-2 cursor-pointer">
+                  {renamingColumnId === col.id ? (
+                    <input
+                      autoFocus
+                      defaultValue={col.name}
+                      className="flex-1 min-w-0 text-xs font-medium outline-none bg-transparent border-2 border-blue-500 rounded px-1 -mx-1"
+                      onClick={(e) => e.stopPropagation()}
+                      onBlur={(e) => {
+                        const val = e.currentTarget.value.trim();
+                        if (val && val !== col.name) updateColumn.mutate({ id: col.id, name: val });
+                        setRenamingColumnId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                        if (e.key === "Escape") setRenamingColumnId(null);
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <span className="truncate font-medium text-xs text-gray-700 flex-1">{col.name}</span>
+                      <button className="invisible group-hover/header:visible flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10">
+                        <ChevronDown className="h-3 w-3 text-gray-500" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="bottom" className="w-60">
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => setRenamingColumnId(col.id)}>
+                  <Pencil className="h-4 w-4" /> Edit field
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                  <Copy className="h-4 w-4" /> Duplicate field
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-3 px-3 py-2"
+                  disabled={isFirstCol}
+                  onClick={() => createColumn.mutate({ tableId, name: `Field ${columns.length + 1}`, type: "TEXT", order: col.order })}
+                >
+                  <ArrowLeft className="h-4 w-4" /> Insert left
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-3 px-3 py-2"
+                  onClick={() => createColumn.mutate({ tableId, name: `Field ${columns.length + 1}`, type: "TEXT", order: col.order + 1 })}
+                >
+                  <ArrowRight className="h-4 w-4" /> Insert right
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" disabled={!isFirstCol}>
+                  <AlignStartVertical className="h-4 w-4" /> Change primary field
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                  <LinkIcon className="h-4 w-4" /> Copy field URL
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                  <Info className="h-4 w-4" /> Edit field description
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                  <Lock className="h-4 w-4" /> Edit field permissions
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddSort?.(col.id, "asc")}>
+                  <ArrowDownAZ className="h-4 w-4" /> Sort A → Z
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddSort?.(col.id, "desc")}>
+                  <ArrowUpZA className="h-4 w-4" /> Sort Z → A
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddFilter?.(col.id)}>
+                  <ListFilter className="h-4 w-4" /> Filter by this field
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                  <Group className="h-4 w-4" /> Group by this field
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+                  <GitBranch className="h-4 w-4" /> Show dependencies
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2 text-gray-400" onClick={() => onHideColumn?.(col.id)}>
+                  <EyeOff className="h-4 w-4" /> Hide field
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-3 px-3 py-2 text-red-500 focus:text-red-500"
+                  onClick={() => deleteColumn.mutate({ id: col.id })}
+                >
+                  <Trash2 className="h-4 w-4" /> Delete field
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ),
           cell: (info) => (
             <EditableCell
@@ -287,6 +438,11 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
     overscan: 5,
   });
 
+  const virtualizerContextValue = useMemo<TableVirtualizerContextValue>(() => ({
+    scrollToIndex: (index: number) => rowVirtualizer.scrollToIndex(index, { align: "auto" }),
+    rowCount: tableRows.length,
+  }), [rowVirtualizer, tableRows.length]);
+
   if (isLoading) {
     return (
       <div className="flex-1 p-4 space-y-2">
@@ -298,6 +454,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
   }
 
   return (
+    <TableVirtualizerContext.Provider value={virtualizerContextValue}>
     <div className="flex flex-col justify-between h-full w-full bg-[#f6f8fc]">
       <div
         ref={tableContainerRef}
@@ -388,6 +545,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts }: V
         <BulkCreateInput queryInput={queryInput} />
       </div>
     </div>
+    </TableVirtualizerContext.Provider>
   );
 }
 

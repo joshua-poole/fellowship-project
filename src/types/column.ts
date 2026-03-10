@@ -23,6 +23,7 @@ export const ColumnCreateInputSchema = z.object({
   tableId: z.string(),
   name: z.string(),
   type: ColumnTypeSchema,
+  order: z.number().int().optional(),
 });
 
 export const ColumnCreateOutputSchema = ColumnModelSchema.pick({

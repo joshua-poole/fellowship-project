@@ -96,6 +96,7 @@ export const ViewUpdateInputSchema = z.object({
 export const ViewUpdateOutputSchema = ViewModelSchema.pick({
   id: true,
   name: true,
+  type: true,
   order: true,
 }).extend({
   search: z.string().nullable(),

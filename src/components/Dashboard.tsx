@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DashboardCard } from "./DashboardCard";
 import { OmniIcon } from "./Omni";
-import { Grid2x2Icon, Table, ArrowUp, ChevronDown, Menu, Grid2X2, Star, Ellipsis } from "lucide-react";
+import { Grid2x2Icon, Table, ArrowUp, ChevronDown, Menu, Grid2X2, Star, Ellipsis, Pencil, Copy, ArrowRight, Users, Palette, Trash2 } from "lucide-react";
 import { api } from "~/trpc/react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "~/components/ui/dropdown-menu";
 
 const BASE_COLORS = [
   "bg-blue-600", "bg-emerald-600", "bg-purple-600", "bg-rose-600",
@@ -35,8 +42,36 @@ function timeAgo(date: Date): string {
 }
 
 export function Dashboard() {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { data: bases, isLoading } = api.base.getAll.useQuery();
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const utils = api.useUtils();
+  const renameBase = api.base.update.useMutation({
+    onMutate: async ({ id, name }) => {
+      await utils.base.getAll.cancel();
+      const prev = utils.base.getAll.getData();
+      utils.base.getAll.setData(undefined, (old) => old?.map((b) => b.id === id ? { ...b, name } : b));
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.base.getAll.setData(undefined, ctx.prev);
+    },
+    onSettled: () => void utils.base.getAll.invalidate(),
+  });
+  const deleteBase = api.base.delete.useMutation({
+    onMutate: async ({ id }) => {
+      await utils.base.getAll.cancel();
+      const prev = utils.base.getAll.getData();
+      utils.base.getAll.setData(undefined, (old) => old?.filter((b) => b.id !== id));
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.base.getAll.setData(undefined, ctx.prev);
+    },
+    onSettled: () => void utils.base.getAll.invalidate(),
+  });
 
   return (
     <div className="mx-12 mt-8">
@@ -102,29 +137,76 @@ export function Dashboard() {
             <div className="border-t border-gray-200" />
             <div className="mt-6">
               {bases.map((base) => (
-                <Link key={base.id} href={`/${base.id}`}>
-                  <div className="group grid grid-cols-[1.5fr_1fr_1fr] items-center py-3 hover:bg-gray-200 cursor-pointer transition-colors rounded">
+                <div key={base.id} className="group grid grid-cols-[1.5fr_1fr_1fr] items-center py-3 hover:bg-gray-200 cursor-pointer transition-colors rounded" onClick={() => router.push(`/${base.id}`)}>
                     <div className="flex items-center gap-3 pl-2">
                       <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${baseColor(base.id)} text-white text-[10px] font-semibold`}>
                         {base.name.charAt(0).toUpperCase()}{base.name.charAt(1)?.toLowerCase() ?? ""}
                       </div>
-                      <span className="text-sm font-normal truncate">{base.name}</span>
+                      {renamingId === base.id ? (
+                        <RenameInput
+                          defaultValue={base.name}
+                          onSubmit={(name) => {
+                            if (name && name !== base.name) renameBase.mutate({ id: base.id, name });
+                            setRenamingId(null);
+                          }}
+                        />
+                      ) : (
+                        <span className="text-sm font-normal truncate">{base.name}</span>
+                      )}
                       <span className="text-xs text-gray-400 hidden group-hover:inline">Open data</span>
                     </div>
                     <div className="relative flex items-center">
-                      <div className="absolute -left-14 items-center gap-0.5 hidden group-hover:flex">
+                      <div className={`absolute -left-14 items-center gap-0.5 flex transition-opacity ${openMenuId === base.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                         <button className="p-1 rounded hover:bg-gray-300 text-gray-400" onClick={(e) => e.preventDefault()}>
                           <Star className="h-3.5 w-3.5" />
                         </button>
-                        <button className="p-1 rounded hover:bg-gray-300 text-gray-400" onClick={(e) => e.preventDefault()}>
-                          <Ellipsis className="h-3.5 w-3.5" />
-                        </button>
+                        <DropdownMenu onOpenChange={(open) => setOpenMenuId(open ? base.id : null)}>
+                          <DropdownMenuTrigger asChild>
+                            <button className="p-1 rounded hover:bg-gray-300 text-gray-400" onClick={(e) => e.preventDefault()}>
+                              <Ellipsis className="h-3.5 w-3.5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent side="bottom" align="start" className="w-56">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenamingId(base.id); }}>
+                              <Pencil className="h-4 w-4" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                              <Copy className="h-4 w-4" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                              <ArrowRight className="h-4 w-4" />
+                              Move
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                              <Users className="h-4 w-4" />
+                              Go to workspace
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                              <Palette className="h-4 w-4" />
+                              Customize appearance
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (confirm(`Delete "${base.name}"? This will delete all tables and data.`)) {
+                                  deleteBase.mutate({ id: base.id });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                       <span className="text-sm text-gray-500">Opened {timeAgo(new Date(base.lastOpenedAt))}</span>
                     </div>
                     <span className="text-sm text-gray-500"></span>
-                  </div>
-                </Link>
+                </div>
               ))}
             </div>
           </div>
@@ -139,5 +221,29 @@ export function Dashboard() {
         )}
       </div>
     </div>
+  );
+}
+
+function RenameInput({ defaultValue, onSubmit }: { defaultValue: string; onSubmit: (name: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  return (
+    <input
+      ref={inputRef}
+      defaultValue={defaultValue}
+      className="text-sm font-normal border border-blue-500 rounded px-1 py-0.5 outline-none w-48"
+      onClick={(e) => e.stopPropagation()}
+      onBlur={(e) => onSubmit(e.currentTarget.value.trim())}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") onSubmit(e.currentTarget.value.trim());
+        if (e.key === "Escape") onSubmit(defaultValue);
+      }}
+    />
   );
 }

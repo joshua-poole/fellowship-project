@@ -21,21 +21,33 @@ type RowFilter = {
   value?: string | number;
 };
 
+function numericIfPossible(value: string | number | undefined): string | number | undefined {
+  if (value == null) return value;
+  if (typeof value === "number") return value;
+  const n = Number(value);
+  return !isNaN(n) && value.trim() !== "" ? n : value;
+}
+
 function buildFilterCondition(filter: RowFilter) {
   const { columnId, operator, value } = filter;
   const path = [columnId];
 
   switch (operator) {
     case "equals":
-      return { values: { path, equals: value } };
+      if (value == null) return {};
+      return { values: { path, equals: numericIfPossible(value) } };
     case "contains":
-      return { values: { path, string_contains: String(value ?? "") } };
+      if (value == null || value === "") return {};
+      return { values: { path, string_contains: String(value) } };
     case "not_contains":
-      return { NOT: { values: { path, string_contains: String(value ?? "") } } };
+      if (value == null || value === "") return {};
+      return { NOT: { values: { path, string_contains: String(value) } } };
     case "gt":
-      return { values: { path, gt: value } };
+      if (value == null) return {};
+      return { values: { path, gt: numericIfPossible(value) } };
     case "lt":
-      return { values: { path, lt: value } };
+      if (value == null) return {};
+      return { values: { path, lt: numericIfPossible(value) } };
     case "is_empty":
       return {
         OR: [
@@ -85,10 +97,12 @@ export const rowRouter = createTRPCRouter({
         conditions.push(...input.filters.map(buildFilterCondition));
       }
 
+      const limit = input.cursor?.limit ?? input.limit;
+
       const rows = await ctx.db.row.findMany({
         where: {
           tableId: input.tableId,
-          ...(input.cursor != null && { order: { gt: input.cursor } }),
+          ...(input.cursor != null && { order: { gt: input.cursor.order } }),
           ...(conditions.length > 0 && { AND: conditions as [] }),
         },
         orderBy: [
@@ -100,14 +114,14 @@ export const rowRouter = createTRPCRouter({
           ) ?? []),
           { order: "asc" as const },
         ],
-        take: input.limit + 1,
+        take: limit + 1,
         select: { id: true, order: true, values: true },
       });
 
-      let nextCursor: number | undefined;
-      if (rows.length > input.limit) {
+      let nextCursor: { order: number; limit: number } | undefined;
+      if (rows.length > limit) {
         rows.pop();
-        nextCursor = rows[rows.length - 1]!.order;
+        nextCursor = { order: rows[rows.length - 1]!.order, limit };
       }
 
       const result = {

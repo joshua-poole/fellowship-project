@@ -50,17 +50,29 @@ export const columnRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
       }
 
-      const last = await ctx.db.column.findFirst({
-        where: { tableId: input.tableId },
-        orderBy: { order: "desc" },
-        select: { order: true },
-      });
+      let newOrder: number;
+      if (input.order !== undefined) {
+        // Shift existing columns at or after this order
+        await ctx.db.column.updateMany({
+          where: { tableId: input.tableId, order: { gte: input.order } },
+          data: { order: { increment: 1 } },
+        });
+        newOrder = input.order;
+      } else {
+        const last = await ctx.db.column.findFirst({
+          where: { tableId: input.tableId },
+          orderBy: { order: "desc" },
+          select: { order: true },
+        });
+        newOrder = (last?.order ?? -1) + 1;
+      }
 
+      const { order: _order, ...rest } = input;
       return await ctx.db.column.create({
         data: {
-          ...input,
+          ...rest,
           id: columnId(),
-          order: (last?.order ?? -1) + 1,
+          order: newOrder,
         },
       });
     }),

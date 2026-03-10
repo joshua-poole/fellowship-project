@@ -29,6 +29,24 @@ export const TableGetByIdOutputSchema = TableModelSchema.pick({
       name: true,
       type: true,
       order: true,
+    }).extend({
+      search: z.string().nullable(),
+      filters: z.array(z.object({
+        id: z.string(),
+        columnId: z.string(),
+        operator: z.string(),
+        value: z.string().nullable(),
+      })),
+      sorts: z.array(z.object({
+        id: z.string(),
+        columnId: z.string(),
+        direction: z.string(),
+        order: z.number().int(),
+      })),
+      hiddenColumns: z.array(z.object({
+        id: z.string(),
+        columnId: z.string(),
+      })),
     }),
   ),
 });
