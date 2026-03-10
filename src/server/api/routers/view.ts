@@ -148,8 +148,6 @@ export const viewRouter = createTRPCRouter({
         }
       }
 
-      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-
       const view = await ctx.db.view.update({
         where: { id },
         data: rest,

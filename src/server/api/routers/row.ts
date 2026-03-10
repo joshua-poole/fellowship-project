@@ -65,6 +65,44 @@ function buildFilterCondition(filter: RowFilter) {
   }
 }
 
+function buildRawFilterCondition(
+  filter: RowFilter,
+  params: (string | number)[],
+): string | null {
+  const { columnId, operator, value } = filter;
+  // columnId is system-generated cuid — safe to interpolate
+  const jsonPath = `"values"->>'${columnId}'`;
+
+  switch (operator) {
+    case "equals":
+      if (value == null) return null;
+      params.push(typeof value === "number" ? value.toString() : String(value));
+      return `${jsonPath} = $${params.length}`;
+    case "contains":
+      if (value == null || value === "") return null;
+      params.push(`%${value}%`);
+      return `${jsonPath} ILIKE $${params.length}`;
+    case "not_contains":
+      if (value == null || value === "") return null;
+      params.push(`%${value}%`);
+      return `${jsonPath} NOT ILIKE $${params.length}`;
+    case "gt":
+      if (value == null) return null;
+      params.push(typeof value === "number" ? value : Number(value));
+      return `(${jsonPath})::numeric > $${params.length}`;
+    case "lt":
+      if (value == null) return null;
+      params.push(typeof value === "number" ? value : Number(value));
+      return `(${jsonPath})::numeric < $${params.length}`;
+    case "is_empty":
+      return `(${jsonPath} IS NULL OR ${jsonPath} = '')`;
+    case "is_not_empty":
+      return `(${jsonPath} IS NOT NULL AND ${jsonPath} != '')`;
+    default:
+      return null;
+  }
+}
+
 function castValues(values: unknown): Record<string, string | number> {
   return (values ?? {}) as Record<string, string | number>;
 }
@@ -86,34 +124,80 @@ export const rowRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma JSON filter types are unresolvable by ESLint
-      const conditions: any[] = [];
-
-      if (input.search) {
-        conditions.push({ values: { string_contains: input.search } });
-      }
-
-      if (input.filters) {
-        conditions.push(...input.filters.map(buildFilterCondition));
-      }
-
       const limit = input.cursor?.limit ?? input.limit;
+      const hasSorts = input.sorts && input.sorts.length > 0;
+      const hasFilters = input.filters && input.filters.length > 0;
+      const hasSearch = !!input.search;
 
+      // Use raw SQL when sorts/filters/search involve JSON fields
+      // (Prisma doesn't support orderBy on JSON fields for PostgreSQL)
+      if (hasSorts || hasFilters || hasSearch) {
+        const params: (string | number)[] = [];
+        const whereParts: string[] = [];
+
+        params.push(input.tableId);
+        whereParts.push(`"tableId" = $${params.length}`);
+
+        if (input.cursor != null) {
+          params.push(input.cursor.order);
+          whereParts.push(`"order" > $${params.length}`);
+        }
+
+        if (hasSearch) {
+          params.push(`%${input.search!}%`);
+          whereParts.push(`"values"::text ILIKE $${params.length}`);
+        }
+
+        if (hasFilters) {
+          for (const f of input.filters!) {
+            const cond = buildRawFilterCondition(f, params);
+            if (cond) whereParts.push(cond);
+          }
+        }
+
+        const orderParts = (input.sorts ?? []).map((s) => {
+          // columnId is system-generated cuid, direction validated by zod — safe to interpolate
+          return `"values"->>'${s.columnId}' ${s.direction === "desc" ? "DESC" : "ASC"}`;
+        });
+        orderParts.push(`"order" ASC`);
+
+        params.push(limit + 1);
+
+        const query = `
+          SELECT "id", "order", "values"
+          FROM "Row"
+          WHERE ${whereParts.join(" AND ")}
+          ORDER BY ${orderParts.join(", ")}
+          LIMIT $${params.length}
+        `;
+
+        const rawRows = await ctx.db.$queryRawUnsafe<
+          Array<{ id: string; order: number; values: unknown }>
+        >(query, ...params);
+
+        let nextCursor: { order: number; limit: number } | undefined;
+        if (rawRows.length > limit) {
+          rawRows.pop();
+          nextCursor = { order: rawRows[rawRows.length - 1]!.order, limit };
+        }
+
+        return {
+          rows: rawRows.map((row) => ({
+            id: row.id,
+            order: row.order,
+            values: castValues(row.values),
+          })),
+          nextCursor,
+        };
+      }
+
+      // Simple case: no sorts/filters/search — use Prisma
       const rows = await ctx.db.row.findMany({
         where: {
           tableId: input.tableId,
           ...(input.cursor != null && { order: { gt: input.cursor.order } }),
-          ...(conditions.length > 0 && { AND: conditions as [] }),
         },
-        orderBy: [
-          ...(input.sorts?.map(
-            (s) =>
-              ({
-                values: { path: [s.columnId], order: s.direction },
-              }) as never,
-          ) ?? []),
-          { order: "asc" as const },
-        ],
+        orderBy: [{ order: "asc" as const }],
         take: limit + 1,
         select: { id: true, order: true, values: true },
       });
@@ -124,7 +208,7 @@ export const rowRouter = createTRPCRouter({
         nextCursor = { order: rows[rows.length - 1]!.order, limit };
       }
 
-      const result = {
+      return {
         rows: rows.map((row) => ({
           id: row.id,
           order: row.order,
@@ -132,8 +216,6 @@ export const rowRouter = createTRPCRouter({
         })),
         nextCursor,
       };
-
-      return result;
     }),
 
   create: protectedProcedure

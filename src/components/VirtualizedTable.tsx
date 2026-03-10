@@ -412,7 +412,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
     );
 
     return cols;
-  }, [columns, columnHelper, tableId, selectedRows, createColumn, rows]);
+  }, [columns, columnHelper, tableId, selectedRows, createColumn, rows, deleteColumn, onAddFilter, onAddSort, onHideColumn, renamingColumnId, updateColumn]);
 
   const table = useReactTable({
     data: rows,

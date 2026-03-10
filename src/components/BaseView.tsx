@@ -274,7 +274,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
       setSearch(activeView.search ?? "");
       setFilters(activeView.filters?.map((f) => ({
         columnId: f.columnId,
-        operator: f.operator as FilterConfig["operator"],
+        operator: f.operator,
         value: f.value ?? null,
       })) ?? []);
       setSorts(activeView.sorts?.map((s) => ({
