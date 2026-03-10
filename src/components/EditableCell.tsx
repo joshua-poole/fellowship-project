@@ -228,7 +228,7 @@ export function EditableCell({
           setValue(v);
         }}
         onFocus={() => setFocused(true)}
-        onClick={() => setEditing(true)}
+        onDoubleClick={() => setEditing(true)}
         onBlur={() => {
           setFocused(false);
           setEditing(false);
