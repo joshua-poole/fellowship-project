@@ -69,7 +69,8 @@ const COLUMN_TYPES = [
 ] as const;
 
 const ROW_HEIGHT = 32;
-const PAGE_LIMITS = [2000, 10000, 50000];
+// TODO: Find optimal pagination limits for smooth experience
+const PAGE_LIMITS = [10000, 90000, 100000];
 
 export function VirtualizedTable({ tableId, columns, search, filters, sorts, onAddSort, onAddFilter, onHideColumn }: VirtualizedTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -695,6 +696,7 @@ function BulkCreateInput({ queryInput }: { queryInput: TableQueryInput }) {
 
   const bulkCreate = api.row.bulkCreate.useMutation();
 
+  // TODO: Find optimal batch size
   const BATCH_SIZE = 10000;
 
   const handleBulkInsert = async () => {

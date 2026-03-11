@@ -11,9 +11,9 @@ export const RowGetByTableInputSchema = RowModelSchema.pick({
 }).extend({
   cursor: z.object({
     order: z.number().int(),
-    limit: z.number().int().min(1).max(50000),
+    limit: z.number().int().min(1).max(100000),
   }).optional(),
-  limit: z.number().int().min(1).max(50000).default(2000),
+  limit: z.number().int().min(1).max(100000).default(5000),
   search: z.string().optional(),
   sorts: z
     .array(

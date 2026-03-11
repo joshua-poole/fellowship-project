@@ -65,6 +65,7 @@ const ownerWhere = (tableId: string, userId: string) => ({
 });
 
 export const rowRouter = createTRPCRouter({
+  // TODO: improve performance
   getByTable: protectedProcedure
     .input(RowGetByTableInputSchema)
     .query(async ({ ctx, input }) => {
@@ -256,6 +257,8 @@ export const rowRouter = createTRPCRouter({
         const valuesJson = JSON.stringify(values).replace(/'/g, "''");
         rowsSql.push(`('${id}', '${input.tableId}', ${order}, '${valuesJson}'::jsonb, '${now}')`);
       }
+      // TODO: use Promise.all to batch the inserts?
+      // await Promise.all([]);
       await ctx.db.$executeRawUnsafe(`
         INSERT INTO "Row" ("id", "tableId", "order", "values", "updatedAt")
         VALUES ${rowsSql.join(", ")};
