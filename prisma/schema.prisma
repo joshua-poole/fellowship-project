@@ -168,7 +168,7 @@ model ViewFilter {
   operator String
   value    String?
 
-  @@index([viewId])
+  @@index([viewId, columnId])
 }
 
 model ViewSort {
@@ -179,7 +179,7 @@ model ViewSort {
   direction String
   order     Int    @default(0)
 
-  @@index([viewId])
+  @@index([viewId, order])
 }
 
 model ViewHiddenColumn {
