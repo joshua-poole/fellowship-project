@@ -101,7 +101,7 @@ export const baseRouter = createTRPCRouter({
 
       return await ctx.db.base.update({
         where: { id: input.id },
-        data: { name: input.name, color: input.color },
+        data: { name: input.name, color: input.color as string },
         select: { id: true, name: true, color: true },
       });
     }),
