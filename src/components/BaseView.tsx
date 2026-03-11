@@ -103,6 +103,8 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
     );
   }
 
+  const color: string = base.color ?? '#1565c0';
+
   return (
     <main className="h-screen w-screen flex overflow-hidden">
       <AppSidebar session={session} onSignOut={handleSignOut} />
@@ -111,11 +113,11 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         <BaseNavbar
           base={base}
           baseId={baseId}
-          baseColor={base.color as string}
+          baseColor={color}
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          onRenameBase={(name) => baseMutations.rename.mutate({ id: baseId, name, color: base.color as string})}
-          onColorChange={(color: string) => baseMutations.rename.mutate({ id: baseId, name: base.name, color })}
+          onRenameBase={(name) => baseMutations.rename.mutate({ id: baseId, name, color: color})}
+          onColorChange={(color) => baseMutations.rename.mutate({ id: baseId, name: base.name, color })}
           onDeleteBase={() => {
             if (confirm(`Delete "${base.name}"? This will delete all tables and data.`)) {
               baseMutations.remove.mutate({ id: baseId });
@@ -126,7 +128,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         <TableTabsBar
           tables={base.tables}
           activeTableId={activeTableId}
-          baseColor={base.color as string}
+          baseColor={color}
           onSelectTable={setActiveTableId}
           onCreateTable={() => tableMutations.create.mutate({ baseId })}
           onDeleteTable={(id, name) => {
