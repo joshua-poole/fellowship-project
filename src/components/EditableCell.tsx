@@ -9,6 +9,23 @@ const pendingEdits = new Map<string, string>();
 
 const BORDER_COLOR = "rgb(22, 110, 225)";
 
+function HighlightedText({ text, search }: { text: string; search: string }) {
+  if (!search) return <>{text}</>;
+  const regex = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="bg-yellow-200 text-inherit rounded-sm">{part}</mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 interface EditableCellProps {
   tableId: string;
   rowId: string;
@@ -18,6 +35,7 @@ interface EditableCellProps {
   isFirstRow?: boolean;
   isFirstCol?: boolean;
   isLastCol?: boolean;
+  search?: string;
 }
 
 export function EditableCell({
@@ -29,6 +47,7 @@ export function EditableCell({
   isFirstRow,
   isFirstCol,
   isLastCol,
+  search,
 }: EditableCellProps) {
   const cellKey = `${rowId}:${columnId}`;
 
@@ -166,13 +185,8 @@ export function EditableCell({
 
     // Enter starts editing if not already, otherwise navigates down
     if (e.key === "Enter") {
-      if (!editing) {
-        setEditing(true);
-        e.preventDefault();
-      } else {
-        e.preventDefault();
-        navigate(e.currentTarget, "down");
-      }
+      e.preventDefault();
+      navigate(e.currentTarget, "down");
       return;
     }
 
@@ -217,9 +231,16 @@ export function EditableCell({
           }}
         />
       )}
+      {!focused && search && value ? (
+        <div className="absolute inset-0 flex items-center px-1.5 pointer-events-none truncate text-sm">
+          <span className="truncate">
+            <HighlightedText text={value} search={search} />
+          </span>
+        </div>
+      ) : null}
       <input
         data-col-id={columnId}
-        className={`w-full bg-transparent outline-none truncate ${focused ? "text-[rgb(22,110,225)]" : ""}`}
+        className={`w-full bg-transparent outline-none truncate ${focused ? "text-[rgb(22,110,225)]" : ""} ${!focused && search && value ? "text-transparent" : ""}`}
         inputMode={columnType === "NUMBER" ? "decimal" : "text"}
         value={value}
         onChange={(e) => {

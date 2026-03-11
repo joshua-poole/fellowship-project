@@ -108,7 +108,7 @@ export const rowRouter = createTRPCRouter({
 
         if (hasSearch) {
           params.push(`%${input.search!}%`);
-          whereParts.push(`"values"::text ILIKE $${params.length}`);
+          whereParts.push(`EXISTS (SELECT 1 FROM jsonb_each_text("values") AS kv WHERE kv.value ILIKE $${params.length})`);
         }
 
         if (hasFilters) {
@@ -260,7 +260,7 @@ export const rowRouter = createTRPCRouter({
           } else if (col.name.toLowerCase().includes("name")) {
             values[col.id] = faker.person.fullName();
           } else {
-            values[col.id] = faker.lorem.sentences({ min: 1, max: 3 });
+            values[col.id] = faker.lorem.words({ min: 1, max: 3 });
           }
         }
         const valuesJson = JSON.stringify(values).replace(/'/g, "''");

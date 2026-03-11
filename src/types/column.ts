@@ -4,8 +4,8 @@ import { ColumnTypeSchema } from "generated/zod/schemas/enums/ColumnType.schema"
 
 export type Column = z.infer<typeof ColumnModelSchema>;
 
-export const ColumnGetByTableInputSchema = z.object({
-  tableId: z.string(),
+export const ColumnGetByTableInputSchema = ColumnModelSchema.pick({
+  tableId: true,
 });
 
 export const ColumnGetByTableOutputSchema = z.array(
@@ -19,12 +19,12 @@ export const ColumnGetByTableOutputSchema = z.array(
   }),
 );
 
-export const ColumnCreateInputSchema = z.object({
-  tableId: z.string(),
-  name: z.string(),
-  type: ColumnTypeSchema,
-  order: z.number().int().optional(),
-});
+export const ColumnCreateInputSchema = ColumnModelSchema.pick({
+  tableId: true,
+  name: true,
+  type: true,
+  order: true,
+}).partial({ order: true });
 
 export const ColumnCreateOutputSchema = ColumnModelSchema.pick({
   id: true,
@@ -33,13 +33,19 @@ export const ColumnCreateOutputSchema = ColumnModelSchema.pick({
   order: true,
 });
 
-export const ColumnUpdateInputSchema = z.object({
-  id: z.string(),
-  name: z.string().optional(),
-  type: ColumnTypeSchema.optional(),
-  order: z.number().int().optional(),
-  description: z.string().nullable().optional(),
-  defaultValue: z.string().nullable().optional(),
+export const ColumnUpdateInputSchema = ColumnModelSchema.pick({
+  id: true,
+  name: true,
+  type: true,
+  order: true,
+  description: true,
+  defaultValue: true,
+}).partial({
+  name: true,
+  type: true,
+  order: true,
+  description: true,
+  defaultValue: true,
 });
 
 export const ColumnUpdateOutputSchema = ColumnModelSchema.pick({
@@ -49,8 +55,8 @@ export const ColumnUpdateOutputSchema = ColumnModelSchema.pick({
   order: true,
 });
 
-export const ColumnDeleteInputSchema = z.object({
-  id: z.string(),
+export const ColumnDeleteInputSchema = ColumnModelSchema.pick({
+  id: true,
 });
 
 export const ColumnDeleteOutputSchema = z.boolean();

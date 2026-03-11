@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { ViewModelSchema } from "generated/zod/schemas/variants/pure/View.pure";
+import { ViewFilterModelSchema } from "generated/zod/schemas/variants/pure/ViewFilter.pure";
+import { ViewSortModelSchema } from "generated/zod/schemas/variants/pure/ViewSort.pure";
+import { ViewHiddenColumnModelSchema } from "generated/zod/schemas/variants/pure/ViewHiddenColumn.pure";
 
 export type View = z.infer<typeof ViewModelSchema>;
 
@@ -13,43 +16,45 @@ const FilterOperatorSchema = z.enum([
   "lt",
 ]);
 
-const ViewFilterSchema = z.object({
-  id: z.string(),
-  columnId: z.string(),
-  operator: FilterOperatorSchema,
-  value: z.string().nullable(),
+const ViewFilterSchema = ViewFilterModelSchema.pick({
+  id: true,
+  columnId: true,
+  operator: true,
+  value: true,
 });
 
-const ViewSortSchema = z.object({
-  id: z.string(),
-  columnId: z.string(),
-  direction: z.enum(["asc", "desc"]),
-  order: z.number().int(),
+const ViewSortSchema = ViewSortModelSchema.pick({
+  id: true,
+  columnId: true,
+  direction: true,
+  order: true,
 });
 
-const ViewHiddenColumnSchema = z.object({
-  id: z.string(),
-  columnId: z.string(),
+const ViewHiddenColumnSchema = ViewHiddenColumnModelSchema.pick({
+  id: true,
+  columnId: true,
 });
 
 // --- Input schemas for create/update (no id required) ---
 
-const ViewFilterInputSchema = z.object({
-  columnId: z.string(),
+const ViewFilterInputSchema = ViewFilterModelSchema.pick({
+  columnId: true,
+  value: true,
+}).partial({ value: true }).extend({
   operator: FilterOperatorSchema,
-  value: z.string().nullable().optional(),
 });
 
-const ViewSortInputSchema = z.object({
-  columnId: z.string(),
+const ViewSortInputSchema = ViewSortModelSchema.pick({
+  columnId: true,
+  order: true,
+}).partial({ order: true }).extend({
   direction: z.enum(["asc", "desc"]),
-  order: z.number().int().optional(),
 });
 
 // --- Procedure schemas ---
 
-export const ViewGetByTableInputSchema = z.object({
-  tableId: z.string(),
+export const ViewGetByTableInputSchema = ViewModelSchema.pick({
+  tableId: true,
 });
 
 export const ViewGetByTableOutputSchema = z.array(
@@ -58,39 +63,44 @@ export const ViewGetByTableOutputSchema = z.array(
     name: true,
     type: true,
     order: true,
+    search: true,
   }).extend({
-    search: z.string().nullable(),
     filters: z.array(ViewFilterSchema),
     sorts: z.array(ViewSortSchema),
     hiddenColumns: z.array(ViewHiddenColumnSchema),
   }),
 );
 
-export const ViewCreateInputSchema = z.object({
-  tableId: z.string(),
-  name: z.string().optional(),
-});
+export const ViewCreateInputSchema = ViewModelSchema.pick({
+  tableId: true,
+  name: true,
+}).partial({ name: true });
 
 export const ViewCreateOutputSchema = ViewModelSchema.pick({
   id: true,
   name: true,
   type: true,
   order: true,
+  search: true,
 }).extend({
-  search: z.string().nullable(),
   filters: z.array(ViewFilterSchema),
   sorts: z.array(ViewSortSchema),
   hiddenColumns: z.array(ViewHiddenColumnSchema),
 });
 
-export const ViewUpdateInputSchema = z.object({
-  id: z.string(),
-  name: z.string().optional(),
-  order: z.number().int().optional(),
-  search: z.string().nullable().optional(),
+export const ViewUpdateInputSchema = ViewModelSchema.pick({
+  id: true,
+  name: true,
+  order: true,
+  search: true,
+}).partial({
+  name: true,
+  order: true,
+  search: true,
+}).extend({
   filters: z.array(ViewFilterInputSchema).optional(),
   sorts: z.array(ViewSortInputSchema).optional(),
-  hiddenColumns: z.array(z.string()).optional(), // array of columnIds
+  hiddenColumns: z.array(z.string()).optional(),
 });
 
 export const ViewUpdateOutputSchema = ViewModelSchema.pick({
@@ -98,15 +108,15 @@ export const ViewUpdateOutputSchema = ViewModelSchema.pick({
   name: true,
   type: true,
   order: true,
+  search: true,
 }).extend({
-  search: z.string().nullable(),
   filters: z.array(ViewFilterSchema),
   sorts: z.array(ViewSortSchema),
   hiddenColumns: z.array(ViewHiddenColumnSchema),
 });
 
-export const ViewDeleteInputSchema = z.object({
-  id: z.string(),
+export const ViewDeleteInputSchema = ViewModelSchema.pick({
+  id: true,
 });
 
 export const ViewDeleteOutputSchema = z.boolean();

@@ -75,8 +75,9 @@ model Verification {
 }
 
 model Base {
-  id   String @id
-  name String @default("Untitled Base")
+  id    String  @id
+  name  String  @default("Untitled Base")
+  color String?
 
   tables    Table[]
   userId    String

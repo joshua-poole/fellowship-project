@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { tableId, columnId, viewId } from "~/lib/ids";
+import { tableId, columnId, viewId, rowId } from "~/lib/ids";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
   TableGetByIdInputSchema,
@@ -94,6 +94,9 @@ export const tableRouter = createTRPCRouter({
           },
           views: {
             create: [{ id: viewId(), name: "Grid view", type: "grid", order: 0 }],
+          },
+          rows: {
+            create: [{ id: rowId(), order: 0, values: {} }],
           },
         },
       });

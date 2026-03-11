@@ -67,7 +67,7 @@ export const columnRouter = createTRPCRouter({
         newOrder = (last?.order ?? -1) + 1;
       }
 
-      const { order: _order, ...rest } = input;
+      const { order: _, ...rest } = input;
       return await ctx.db.column.create({
         data: {
           ...rest,

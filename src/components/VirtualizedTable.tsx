@@ -150,7 +150,6 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
       if (!lastPage.nextCursor) return undefined;
       const idx = Math.min(allPages.length, PAGE_LIMITS.length - 1);
       const nextLimit = PAGE_LIMITS[idx] ?? PAGE_LIMITS[PAGE_LIMITS.length - 1] ?? 50000;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- tRPC infinite query types are unresolvable by ESLint
       return { order: lastPage.nextCursor.order, limit: nextLimit };
     },
   });
@@ -162,7 +161,6 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
 
   const utils = api.useUtils();
 
-  // TODO: Add optimistic updates for row and column creation to make it instant in frontend
   const createRow = api.row.create.useMutation({
     onMutate: async ({ tableId: tid }) => {
       await utils.row.getByTable.cancel({ tableId: tid });
@@ -480,6 +478,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
               isFirstCol={isFirstCol}
               isLastCol={isLastCol}
               isFirstRow={info.row.index === 0}
+              search={search}
             />
           ),
           size: 180,
@@ -516,7 +515,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
     );
 
     return cols;
-  }, [columns, columnHelper, tableId, selectedRows, createColumn, rows, deleteColumn, onAddFilter, onAddSort, onHideColumn, editingColumnId, updateColumn, addColumnOpen]);
+  }, [columns, columnHelper, tableId, selectedRows, createColumn, rows, deleteColumn, onAddFilter, onAddSort, onHideColumn, editingColumnId, updateColumn, addColumnOpen, search]);
 
   const table = useReactTable({
     data: rows,
@@ -721,7 +720,7 @@ function ColumnFieldForm({
 }
 
 function BulkCreateInput({ queryInput }: { queryInput: TableQueryInput }) {
-  const [count, setCount] = useState(1000);
+  const [count, setCount] = useState(100000);
   const [progress, setProgress] = useState(0);
   const [isInserting, setIsInserting] = useState(false);
   const utils = api.useUtils();

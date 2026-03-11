@@ -1,126 +1,66 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { api } from "~/trpc/react";
 import { authClient, signOut } from "~/server/better-auth/client";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Button } from "~/components/ui/button";
-import { OmniBaseView } from "./icons/OmniBaseView";
-import { RowHeightIcon, GridFeatureIcon } from "./icons";
-import { LogoIcon } from "./Logo";
 import {
-  ArrowLeft,
-  Bell,
+  Menu,
   ChevronDown,
-  CircleQuestionMark,
-  EyeOff,
   Group,
   PaintBucket,
   ExternalLink,
-  MoreHorizontal,
-  Search,
-  Menu,
-  Plus,
-  Link as LinkIcon,
-  History,
-  Wrench,
-  Settings,
-  User,
-  Users,
-  Languages,
-  Palette,
-  Mail,
-  CircleStar,
-  Star,
-  Trash2,
-  LogOut,
-  Pencil,
-  SlidersHorizontal,
-  Copy,
-  GanttChart,
-  Info,
-  Lock,
-  X,
-  ArrowUpCircle,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "~/components/ui/popover";
+import { RowHeightIcon, GridFeatureIcon } from "./icons";
 import { VirtualizedTable } from "./VirtualizedTable";
-import { SearchBar, FilterPopover, SortPopover, HideFieldsPopover, type FilterConfig, type SortConfig } from "./ViewToolbar";
+import { SearchBar, FilterPopover, SortPopover, HideFieldsPopover } from "./ViewToolbar";
+import { AppSidebar } from "./AppSidebar";
+import { BaseNavbar } from "./BaseNavbar";
+import { TableTabsBar } from "./TableTabsBar";
+import { ViewsSidebar } from "./ViewsSidebar";
+import { useBaseMutations } from "~/hooks/useBaseMutations";
+import { useTableMutations } from "~/hooks/useTableMutations";
+import { useViewMutations } from "~/hooks/useViewMutations";
+import { useViewConfig } from "~/hooks/useViewConfig";
 
-/* ─── color helpers ─── */
-const BASE_COLORS = [
-  "bg-blue-600", "bg-emerald-600", "bg-purple-600", "bg-rose-600",
-  "bg-amber-600", "bg-cyan-600", "bg-indigo-600", "bg-pink-600",
-  "bg-teal-600", "bg-orange-600",
-];
-
-const AVATAR_COLORS = [
-  "bg-teal-300", "bg-rose-300", "bg-violet-300", "bg-sky-300",
-  "bg-amber-300", "bg-emerald-300", "bg-indigo-300", "bg-pink-300",
-];
-
-function hashColor(id: string, colors: string[]) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  return colors[Math.abs(hash) % colors.length]!;
-}
-
-/* ─── component ─── */
 export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string }) {
-  const router = useRouter();
   const { data: session } = authClient.useSession();
-
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-  };
-
   const { data: base, isLoading: baseLoading } = api.base.getById.useQuery({ id: baseId });
 
+  // Active table state
   const [activeTableId, setActiveTableIdState] = useState<string | undefined>(tableId);
   const [activeTab, setActiveTab] = useState("Data");
-  const [basePopoverOpen, setBasePopoverOpen] = useState(false);
   const [viewsSidebarOpen, setViewsSidebarOpen] = useState(true);
 
   const setActiveTableId = useCallback((id: string | undefined) => {
     setActiveTableIdState(id);
   }, []);
 
-  // Set initial active table when base loads
+  // Auto-select first table when base loads
   useEffect(() => {
     if (!activeTableId && base?.tables?.[0]) {
       setActiveTableId(base.tables[0].id);
     }
   }, [base, activeTableId, setActiveTableId]);
 
+  // Table data query (skip temp IDs from optimistic updates)
+  const isRealTableId = !!activeTableId && !activeTableId.startsWith("tbl_tmp_");
   const { data: tableData } = api.table.getById.useQuery(
     { id: activeTableId! },
-    { enabled: !!activeTableId },
+    { enabled: isRealTableId },
   );
 
+  // Active view state
   const [activeViewId, setActiveViewId] = useState<string | undefined>(undefined);
   const activeView = tableData?.views?.find((v) => v.id === activeViewId) ?? tableData?.views?.[0];
 
-  // Set initial active view when table data loads or changes
   useEffect(() => {
     if (tableData?.views?.length && !tableData.views.some((v) => v.id === activeViewId)) {
       setActiveViewId(tableData.views[0]!.id);
     }
   }, [tableData?.views, activeViewId]);
 
-  // Update URL when active table/view changes (without triggering navigation)
+  // URL sync
   useEffect(() => {
     if (activeTableId && activeView) {
       window.history.replaceState(null, "", `/${baseId}/${activeTableId}/${activeView.id}`);
@@ -129,268 +69,24 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
     }
   }, [activeTableId, activeView, baseId]);
 
-  const utils = api.useUtils();
-  const renameBase = api.base.update.useMutation({
-    onMutate: async ({ id, name }) => {
-      await utils.base.getById.cancel({ id });
-      const prev = utils.base.getById.getData({ id });
-      utils.base.getById.setData({ id }, (old) => old ? { ...old, name } : old);
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) utils.base.getById.setData({ id: baseId }, ctx.prev);
-    },
-    onSettled: () => void utils.base.getById.invalidate({ id: baseId }),
-  });
+  // Mutations
+  const baseMutations = useBaseMutations(baseId);
+  const tableMutations = useTableMutations(baseId, activeTableId, setActiveTableId);
+  const viewMutations = useViewMutations(activeTableId, setActiveViewId);
 
-  const deleteBase = api.base.delete.useMutation({
-    onSuccess: () => router.push("/"),
-  });
-
-  const createTable = api.table.create.useMutation({
-    onMutate: async ({ baseId: bid }) => {
-      await utils.base.getById.cancel({ id: bid });
-      const prev = utils.base.getById.getData({ id: bid });
-      const existingTables = prev?.tables ?? [];
-      const highestNum = existingTables.reduce((max, t) => {
-        const match = /^Table (\d+)$/.exec(t.name);
-        return match ? Math.max(max, parseInt(match[1]!, 10)) : max;
-      }, 0);
-      const lastOrder = existingTables[existingTables.length - 1]?.order ?? -1;
-      const optimisticTable = {
-        id: `tbl_tmp_${Date.now()}`,
-        name: `Table ${highestNum + 1}`,
-        order: lastOrder + 1,
-      };
-      utils.base.getById.setData({ id: bid }, (old) =>
-        old ? { ...old, tables: [...old.tables, optimisticTable] } : old,
-      );
-      return { prev, optimisticId: optimisticTable.id };
-    },
-    onSuccess: (newTable, { baseId: bid }, ctx) => {
-      utils.base.getById.setData({ id: bid }, (old) =>
-        old ? {
-          ...old,
-          tables: old.tables.map((t) =>
-            t.id === ctx?.optimisticId ? { id: newTable.id, name: newTable.name, order: newTable.order } : t
-          ),
-        } : old,
-      );
-      setActiveTableId(newTable.id);
-    },
-    onError: (_err, { baseId: bid }, ctx) => {
-      if (ctx?.prev) utils.base.getById.setData({ id: bid }, ctx.prev);
-    },
-    onSettled: (_data, _err, { baseId: bid }) => {
-      void utils.base.getById.invalidate({ id: bid });
-    },
-  });
-
-  const deleteTable = api.table.delete.useMutation({
-    onMutate: async ({ id }) => {
-      await utils.base.getById.cancel({ id: baseId });
-      const prev = utils.base.getById.getData({ id: baseId });
-      utils.base.getById.setData({ id: baseId }, (old) =>
-        old ? { ...old, tables: old.tables.filter((t) => t.id !== id) } : old,
-      );
-      if (activeTableId === id) {
-        const remaining = prev?.tables.filter((t) => t.id !== id) ?? [];
-        setActiveTableId(remaining[0]?.id);
-      }
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) utils.base.getById.setData({ id: baseId }, ctx.prev);
-    },
-    onSettled: () => {
-      void utils.base.getById.invalidate({ id: baseId });
-    },
-  });
-
-  const tableQueryKey = { id: activeTableId! };
-
-  const createView = api.view.create.useMutation({
-    onMutate: async (input) => {
-      if (!activeTableId) return;
-      await utils.table.getById.cancel(tableQueryKey);
-      const prev = utils.table.getById.getData(tableQueryKey);
-      const existingViews = prev?.views ?? [];
-      const optimisticId = `viw_tmp_${Date.now()}`;
-      const optimisticView = {
-        id: optimisticId,
-        name: input.name ?? "Grid view",
-        type: "grid",
-        order: (existingViews[existingViews.length - 1]?.order ?? -1) + 1,
-        search: null,
-        filters: [],
-        sorts: [],
-        hiddenColumns: [],
-      };
-      utils.table.getById.setData(tableQueryKey, (old) =>
-        old ? { ...old, views: [...old.views, optimisticView] } : old,
-      );
-      return { prev, optimisticId };
-    },
-    onSuccess: (newView, _vars, ctx) => {
-      if (!activeTableId || !ctx?.optimisticId) return;
-      utils.table.getById.setData(tableQueryKey, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          views: old.views.map((v) =>
-            v.id === ctx.optimisticId ? { ...newView } : v
-          ),
-        };
-      });
-      setActiveViewId((cur) => cur === ctx.optimisticId ? newView.id : cur);
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev && activeTableId) utils.table.getById.setData(tableQueryKey, ctx.prev);
-    },
-    onSettled: () => {
-      if (activeTableId) void utils.table.getById.invalidate(tableQueryKey);
-    },
-  });
-
-  const updateView = api.view.update.useMutation({
-    onMutate: async (input) => {
-      if (!activeTableId) return;
-      await utils.table.getById.cancel(tableQueryKey);
-      const prev = utils.table.getById.getData(tableQueryKey);
-      utils.table.getById.setData(tableQueryKey, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          views: old.views.map((v) => {
-            if (v.id !== input.id) return v;
-            return {
-              ...v,
-              ...(input.name !== undefined && { name: input.name }),
-              ...(input.search !== undefined && { search: input.search }),
-              ...(input.filters !== undefined && {
-                filters: input.filters.map((f, i) => ({
-                  id: `vfl_tmp_${i}`,
-                  columnId: f.columnId,
-                  operator: f.operator,
-                  value: f.value ?? null,
-                })),
-              }),
-              ...(input.sorts !== undefined && {
-                sorts: input.sorts.map((s, i) => ({
-                  id: `vsr_tmp_${i}`,
-                  columnId: s.columnId,
-                  direction: s.direction,
-                  order: s.order ?? i,
-                })),
-              }),
-              ...(input.hiddenColumns !== undefined && {
-                hiddenColumns: input.hiddenColumns.map((colId, i) => ({
-                  id: `vhc_tmp_${i}`,
-                  columnId: colId,
-                })),
-              }),
-            };
-          }),
-        };
-      });
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev && activeTableId) utils.table.getById.setData(tableQueryKey, ctx.prev);
-    },
-    onSettled: () => {
-      if (activeTableId) void utils.table.getById.invalidate(tableQueryKey);
-    },
-  });
-
-  const deleteView = api.view.delete.useMutation({
-    onMutate: async (input) => {
-      if (!activeTableId) return;
-      await utils.table.getById.cancel(tableQueryKey);
-      const prev = utils.table.getById.getData(tableQueryKey);
-      utils.table.getById.setData(tableQueryKey, (old) =>
-        old ? { ...old, views: old.views.filter((v) => v.id !== input.id) } : old,
-      );
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev && activeTableId) utils.table.getById.setData(tableQueryKey, ctx.prev);
-    },
-    onSettled: () => {
-      if (activeTableId) void utils.table.getById.invalidate(tableQueryKey);
-    },
-  });
-
-  const [renamingViewId, setRenamingViewId] = useState<string | null>(null);
-
+  // View config (search, filters, sorts, hidden columns)
   const columns = useMemo(() => tableData?.columns ?? [], [tableData?.columns]);
-
-  // Toolbar state — synced from active view
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<FilterConfig[]>([]);
-  const [sorts, setSorts] = useState<SortConfig[]>([]);
-  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
-
-  // Load state from active view when it changes
-  useEffect(() => {
-    if (activeView) {
-      setSearch(activeView.search ?? "");
-      setFilters(activeView.filters?.map((f) => ({
-        columnId: f.columnId,
-        operator: f.operator,
-        value: f.value ?? null,
-      })) ?? []);
-      setSorts(activeView.sorts?.map((s) => ({
-        columnId: s.columnId,
-        direction: s.direction as SortConfig["direction"],
-      })) ?? []);
-      setHiddenColumns(activeView.hiddenColumns?.map((h) => h.columnId) ?? []);
-    }
-  }, [activeView?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Persist toolbar changes back to the active view
-  const saveViewConfig = useCallback((update: {
-    search?: string;
-    filters?: FilterConfig[];
-    sorts?: SortConfig[];
-    hiddenColumns?: string[];
-  }) => {
-    if (!activeView) return;
-    updateView.mutate({
-      id: activeView.id,
-      ...(update.search !== undefined && { search: update.search || null }),
-      ...(update.filters !== undefined && {
-        filters: update.filters.map((f) => ({
-          columnId: f.columnId,
-          operator: f.operator as "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt",
-          value: f.value ?? null,
-        })),
-      }),
-      ...(update.sorts !== undefined && {
-        sorts: update.sorts.map((s, i) => ({
-          columnId: s.columnId,
-          direction: s.direction,
-          order: i,
-        })),
-      }),
-      ...(update.hiddenColumns !== undefined && { hiddenColumns: update.hiddenColumns }),
-    });
-  }, [activeView, updateView]);
-
-  const handleSearchChange = useCallback((v: string) => { setSearch(v); saveViewConfig({ search: v }); }, [saveViewConfig]);
-  const handleFiltersChange = useCallback((v: FilterConfig[]) => { setFilters(v); saveViewConfig({ filters: v }); }, [saveViewConfig]);
-  const handleSortsChange = useCallback((v: SortConfig[]) => { setSorts(v); saveViewConfig({ sorts: v }); }, [saveViewConfig]);
-  const handleHiddenColumnsChange = useCallback((v: string[]) => { setHiddenColumns(v); saveViewConfig({ hiddenColumns: v }); }, [saveViewConfig]);
-
-  const visibleColumns = useMemo(
-    () => {
-      const hiddenSet = new Set(hiddenColumns);
-      return columns.filter((c) => !hiddenSet.has(c.id));
-    },
-    [columns, hiddenColumns],
+  const viewConfig = useViewConfig(
+    activeView,
+    (update) => viewMutations.update.mutate(update),
+    columns,
   );
 
-  /* ─── loading ─── */
+  const handleSignOut = async () => {
+    await signOut();
+    window.location.href = "/";
+  };
+
   if (baseLoading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center">
@@ -409,209 +105,39 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
 
   return (
     <main className="h-screen w-screen flex overflow-hidden">
-      {/* ═══ Sidebar ═══ */}
-      <aside className="flex shrink-0 flex-col items-center justify-between bg-white border-r border-(--colors-border-default) py-2 px-2" style={{ width: 56 }}>
-        <div className="flex flex-col items-center gap-1">
-          {/* Airtable logo / back button */}
-          <div
-            className="group flex h-9 w-9 items-center justify-center rounded-md cursor-pointer transition-colors hover:bg-gray-100"
-            onClick={() => router.push("/")}
-          >
-            <span className="group-hover:hidden [&_svg]:h-6 [&_svg]:w-6 [&_path]:fill-black!">
-              <LogoIcon />
-            </span>
-            <ArrowLeft className="h-5 w-5 hidden group-hover:block text-gray-600" />
-          </div>
-          {/* Omni */}
-          <div className="flex items-center justify-center p-2 rounded-md cursor-pointer hover:bg-gray-100">
-            <OmniBaseView />
-          </div>
-        </div>
+      <AppSidebar session={session} onSignOut={handleSignOut} />
 
-        <div className="flex flex-col items-center gap-2 mb-2">
-          <SidebarIcon icon={CircleQuestionMark} />
-          <SidebarIcon icon={Bell} />
-          {/* Account avatar */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className={`flex h-7 w-7 items-center justify-center rounded-full ${hashColor(session?.user?.id ?? "", AVATAR_COLORS)} cursor-pointer select-none`}>
-                <span className="text-sm font-medium text-black">{session?.user?.name?.charAt(0).toUpperCase()}</span>
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="right" className="min-w-76 p-5">
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">{session?.user?.name}</p>
-                <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
-              </div>
-              <DropdownMenuSeparator className="my-3" />
-              <DropdownMenuItem className="cursor-pointer"><User />Account</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer"><Users />Manage groups</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer"><Bell />Notification preferences</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer"><Languages />Language preferences</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer"><Palette />Appearance</DropdownMenuItem>
-              <DropdownMenuSeparator className="my-3" />
-              <DropdownMenuItem className="cursor-pointer text-sm"><Mail />Contact sales</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer text-sm"><CircleStar />Upgrade</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer text-sm"><Mail />Tell a friend</DropdownMenuItem>
-              <DropdownMenuSeparator className="my-3" />
-              <DropdownMenuItem className="cursor-pointer text-sm"><LinkIcon />Integrations</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer text-sm"><Wrench />Builder hub</DropdownMenuItem>
-              <DropdownMenuSeparator className="my-3" />
-              <DropdownMenuItem className="cursor-pointer text-sm"><Trash2 />Trash</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer text-sm" onClick={handleSignOut}><LogOut />Log out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </aside>
-
-      {/* ═══ Main Area ═══ */}
       <div className="flex flex-1 flex-col min-w-0">
-        {/* ─── Navbar ─── */}
-        <div className="flex items-center justify-between border-b border-(--colors-border-default) pl-4 shrink-0 w-full" style={{ height: 56 }}>
-          <div className="flex items-center gap-2">
-            <div className={`flex h-8 w-8 items-center justify-center rounded-[6px] ${hashColor(baseId, BASE_COLORS)} [&_path]:fill-white! border border-(--colors-border-default)`}>
-              <span className="[&_svg]:w-6 [&_svg]:h-[20.4px]"><LogoIcon /></span>
-            </div>
-            <Popover open={basePopoverOpen} onOpenChange={setBasePopoverOpen}>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 rounded px-1 -ml-1 transition-colors">
-                  <span className="truncate" style={{ lineHeight: "24px", fontWeight: 700, fontFamily: "var(--font-family-body)", fontSize: "var(--font-size-heading-small)", minWidth: 0, flex: "0 1 auto" }}>{base.name}</span>
-                  <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent side="bottom" align="start" className="w-96 p-0">
-                <BasePopoverPanel
-                  base={base}
-                  onRename={(name) => { renameBase.mutate({ id: baseId, name }); setBasePopoverOpen(false); }}
-                  onDelete={() => {
-                    if (confirm(`Delete "${base.name}"? This will delete all tables and data.`)) {
-                      deleteBase.mutate({ id: baseId });
-                    }
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+        <BaseNavbar
+          base={base}
+          baseId={baseId}
+          baseColor={base.color as string}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onRenameBase={(name) => baseMutations.rename.mutate({ id: baseId, name, color: base.color as string})}
+          onColorChange={(color: string) => baseMutations.rename.mutate({ id: baseId, name: base.name, color })}
+          onDeleteBase={() => {
+            if (confirm(`Delete "${base.name}"? This will delete all tables and data.`)) {
+              baseMutations.remove.mutate({ id: baseId });
+            }
+          }}
+        />
 
-          <ul className="relative flex items-stretch justify-center gap-4 px-2 bg-(--colors-background-default) self-stretch">
-            {["Data", "Automations", "Interfaces", "Forms"].map((tab) => (
-              <li key={tab}>
-                <a className="relative flex h-full items-center cursor-pointer" onClick={() => setActiveTab(tab)}>
-                  <p className={`font-sans text-sm leading-4 font-semibold py-2 ${tab === activeTab ? "text-(--colors-foreground-default)" : "text-gray-500 hover:text-black"}`}>
-                    {tab}
-                  </p>
-                  <div
-                    className="absolute right-0 left-0 bg-blue-600 transition-all"
-                    style={{ bottom: -1, height: tab === activeTab ? 2 : 0 }}
-                  />
-                </a>
-              </li>
-            ))}
-          </ul>
+        <TableTabsBar
+          tables={base.tables}
+          activeTableId={activeTableId}
+          baseColor={base.color as string}
+          onSelectTable={setActiveTableId}
+          onCreateTable={() => tableMutations.create.mutate({ baseId })}
+          onDeleteTable={(id, name) => {
+            if (confirm(`Delete "${name}"? All data in this table will be lost.`)) {
+              tableMutations.remove.mutate({ id });
+            }
+          }}
+          isCreating={tableMutations.create.isPending}
+        />
 
-          <div className="flex items-center gap-2 pr-4">
-            <div className="flex items-center justify-center w-7 h-7 rounded-full cursor-pointer hover:bg-gray-100 transition-colors">
-              <History className="h-4 w-4 text-gray-600" />
-            </div>
-            <Button variant="outline" className="border border-(--colors-border-default) h-7 px-2! flex-none gap-1 hover:bg-white">
-              <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
-                <path fillRule="evenodd" d="M13.5 2.5c.546 0 1 .454 1 1v4a.5.5 0 0 1-1 0v-4H6v9h2.5a.5.5 0 0 1 0 1h-6c-.546 0-1-.454-1-1v-9c0-.546.454-1 1-1h11Zm-11 1v9H5v-9H2.5Z M11.124 8.67a.5.5 0 0 1 .653-.086l3 2a.5.5 0 0 1 0 .832l-3 2A.5.5 0 0 1 11 13V9a.5.5 0 0 1 .124-.33Z" />
-              </svg>
-              Launch
-            </Button>
-            <Button variant="outline" className="border border-(--colors-border-default) w-7 h-7 hover:bg-white">
-              <LinkIcon className="h-3.5! w-3.5! flex-none" />
-            </Button>
-            <Button className="h-7 px-3 text-white bg-[#3b66a3] hover:bg-[#3b66a3] border-0 rounded-[6px]">Share</Button>
-          </div>
-        </div>
-
-        {/* ─── Table Tabs Bar ─── */}
-        <div className="relative flex items-center justify-between bg-[#f1f5ff] shrink-0 border-b border-(--colors-border-default) w-full" style={{ height: 32 }}>
-          <div className="flex items-stretch h-full overflow-visible">
-            {base.tables.map((t, index) => {
-              const isActive = t.id === activeTableId;
-              const prevActive = index > 0 && base.tables[index - 1]?.id === activeTableId;
-              const showDividerBefore = index > 0 && !isActive && !prevActive;
-              return (
-                <Fragment key={t.id}>
-                  {showDividerBefore && (
-                    <div className="flex items-center self-center">
-                      <div style={{ height: 12, width: 1, backgroundColor: "rgba(0, 0, 0, 0.1)" }} />
-                    </div>
-                  )}
-                  {isActive ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className={`relative flex items-center text-sm transition-colors cursor-pointer bg-white font-medium rounded-tr-sm border-x border-t border-(--colors-border-default) -mt-px z-10`}
-                          style={{ paddingLeft: 12, paddingRight: 32, marginBottom: -1, paddingBottom: 1 }}
-                        >
-                          {t.name}
-                          <div className="absolute top-0 bottom-0 flex items-center" style={{ right: 12 }}>
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                          </div>
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" side="bottom" sideOffset={8} className="p-3 w-83! h-108.5! max-h-108.5!">
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><ArrowUpCircle className="h-4 w-4 mr-2" />Import data<ChevronDown className="h-4 w-4 -rotate-90" /></DropdownMenuItem>
-                        <DropdownMenuSeparator className="m-2 opacity-50" />
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Pencil className="h-4 w-4 mr-2" />Rename table</DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><EyeOff className="h-4 w-4 mr-2" />Hide table</DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><SlidersHorizontal className="h-4 w-4 mr-2" />Manage fields</DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Copy className="h-4 w-4 mr-2" />Duplicate table</DropdownMenuItem>
-                        <DropdownMenuSeparator className="m-2 opacity-50" />
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><GanttChart className="h-4 w-4 mr-2" />Configure date dependencies</DropdownMenuItem>
-                        <DropdownMenuSeparator className="m-2 opacity-50" />
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Info className="h-4 w-4 mr-2" />Edit table description</DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Lock className="h-4 w-4 mr-2" />Edit table permissions</DropdownMenuItem>
-                        <DropdownMenuSeparator className="m-2 opacity-50" />
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><X className="h-4 w-4 mr-2" />Clear data</DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0" onClick={() => { if (confirm(`Delete "${t.name}"? All data in this table will be lost.`)) deleteTable.mutate({ id: t.id }); }}><Trash2 className="h-4 w-4 mr-2" />Delete table</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <button
-                      onClick={() => setActiveTableId(t.id)}
-                      className="relative flex items-center text-sm transition-colors cursor-pointer text-gray-500 hover:text-black"
-                      style={{ paddingLeft: 12, paddingRight: 12 }}
-                    >
-                      {t.name}
-                    </button>
-                  )}
-                </Fragment>
-              );
-            })}
-            {/* Divider after last tab */}
-            {base.tables[base.tables.length - 1]?.id !== activeTableId && (
-              <div className="flex items-center self-center">
-                <div style={{ height: 12, width: 1, backgroundColor: "rgba(0, 0, 0, 0.1)" }} />
-              </div>
-            )}
-            <button
-              className="h-8 w-10 flex items-center gap-1 transition-colors px-3 cursor-pointer"
-            >
-              <ChevronDown className="h-4 w-4 text-gray-500" />
-            </button>
-            <button
-              className="group flex items-center gap-1 px-1.5 transition-colors cursor-pointer"
-              onClick={() => createTable.mutate({ baseId })}
-              disabled={createTable.isPending}
-              style={{ height: 32 }}
-            >
-              <Plus className="h-4 w-4 text-gray-500 group-hover:text-black transition-colors" />
-              <span className="text-sm text-gray-500 group-hover:text-black ml-1 transition-colors">Add or import</span>
-            </button>
-          </div>
-
-          <div className="flex items-center">
-            <button className="flex items-center gap-1 px-3 text-sm text-gray-500" style={{ height: 32 }}>
-              Tools <ChevronDown className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* ─── Views Bar ─── */}
+        {/* Views Bar */}
         <div className="flex h-12 items-center justify-between border-b border-(--colors-border-default) shrink-0">
           <div className="pl-3 pr-2 flex items-center">
             <button className="h-8 w-8 rounded-sm hover:bg-gray-100 mr-1 flex items-center justify-center cursor-pointer" style={{ padding: 0 }} onClick={() => setViewsSidebarOpen((o) => !o)}>
@@ -624,152 +150,57 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
           </div>
 
           <div className="flex items-center gap-0.5 pr-2">
-            <HideFieldsPopover columns={columns} hiddenColumns={hiddenColumns} onHiddenColumnsChange={handleHiddenColumnsChange} />
-            <FilterPopover columns={columns} filters={filters} onFiltersChange={handleFiltersChange} />
+            <HideFieldsPopover columns={columns} hiddenColumns={viewConfig.hiddenColumns} onHiddenColumnsChange={viewConfig.handleHiddenColumnsChange} />
+            <FilterPopover columns={columns} filters={viewConfig.filters} onFiltersChange={viewConfig.handleFiltersChange} />
             <ToolbarButton icon={Group} label="Group" />
-            <SortPopover columns={columns} sorts={sorts} onSortsChange={handleSortsChange} />
+            <SortPopover columns={columns} sorts={viewConfig.sorts} onSortsChange={viewConfig.handleSortsChange} />
             <ToolbarButton icon={PaintBucket} label="Color" />
             <ToolbarButton icon={RowHeightIcon} label="" />
             <ToolbarButton icon={ExternalLink} label="Share and sync" />
-            <SearchBar value={search} onChange={handleSearchChange} />
+            <SearchBar value={viewConfig.search} onChange={viewConfig.handleSearchChange} />
           </div>
         </div>
 
-        {/* ─── Views Sidebar + Grid ─── */}
+        {/* Views Sidebar + Grid */}
         <div className="flex flex-1 min-h-0 min-w-0">
-          {/* Views Sidebar */}
-          {viewsSidebarOpen && <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-1 py-1.25" style={{ width: 280 }}>
-            <div className="flex flex-col pb-2">
-              {/* Create button */}
-              <div className="flex-none pb-1">
-                <button
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md hover:bg-(--colors-background-selected-hover) cursor-pointer transition-colors"
-                  onClick={() => {
-                    if (activeTableId) {
-                      const existingCount = tableData?.views?.length ?? 0;
-                      const name = existingCount === 0 ? "Grid view" : `Grid ${existingCount + 1}`;
-                      createView.mutate({ tableId: activeTableId, name });
-                    }
-                  }}
-                  disabled={createView.isPending}
-                >
-                  <Plus className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Create new...</span>
-                </button>
-              </div>
+          {viewsSidebarOpen && (
+            <ViewsSidebar
+              views={tableData?.views ?? []}
+              activeViewId={activeView?.id}
+              onSelectView={setActiveViewId}
+              onCreateView={() => {
+                if (activeTableId) {
+                  const existingCount = tableData?.views?.length ?? 0;
+                  const name = existingCount === 0 ? "Grid view" : `Grid ${existingCount + 1}`;
+                  viewMutations.create.mutate({ tableId: activeTableId, name });
+                }
+              }}
+              onRenameView={(id, name) => viewMutations.update.mutate({ id, name })}
+              onDeleteView={(id) => viewMutations.remove.mutate({ id })}
+              isCreating={viewMutations.create.isPending}
+            />
+          )}
 
-              {/* Search */}
-              <div className="flex-none mt-1">
-                <div className="relative focus-within:rounded-md focus-within:shadow-[inset_0_0_0_2px_rgb(22,110,225)]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Find a view"
-                    className="py-1.5 pl-9 pr-7.5 h-8 w-65.75 text-xs outline-none bg-transparent placeholder:text-gray-400 focus:border-red-600"
-                  />
-                  <div className="h-4 w-7 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2">
-                    <Settings className="h-4 w-4 text-black cursor-pointer transform rotate-30" strokeWidth={1.5}/>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* View list */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden">
-              <ul role="listbox">
-                {tableData?.views?.map((v) => (
-                  <li
-                    key={v.id}
-                    role="option"
-                    aria-selected={v.id === activeView?.id}
-                    onClick={() => setActiveViewId(v.id)}
-                    className={`group relative flex items-center rounded-sm px-3 py-2 cursor-pointer transition-colors ${
-                      v.id === activeView?.id
-                        ? "bg-(--colors-background-selected)"
-                        : "hover:bg-(--colors-background-selected-hover)"
-                    }`}
-                  >
-                    <div className="flex flex-1 items-center gap-2 min-w-0">
-                      <GridFeatureIcon className="h-4 w-4 shrink-0" style={{ color: "rgb(22, 110, 225)" }} />
-                      {renamingViewId === v.id ? (
-                        <input
-                          autoFocus
-                          defaultValue={v.name}
-                          className="flex-1 min-w-0 text-sm outline-none bg-transparent border-2 border-blue-500 rounded px-1 -mx-1"
-                          onBlur={(e) => {
-                            const val = e.currentTarget.value.trim();
-                            if (val && val !== v.name) updateView.mutate({ id: v.id, name: val });
-                            setRenamingViewId(null);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") e.currentTarget.blur();
-                            if (e.key === "Escape") setRenamingViewId(null);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      ) : (
-                        <span className={`truncate text-sm ${v.id === activeView?.id ? "font-semibold" : ""}`}>
-                          {v.name}
-                        </span>
-                      )}
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="invisible group-hover:visible flex items-center justify-center h-5 w-5 rounded shrink-0 hover:bg-black/10 cursor-pointer">
-                          <MoreHorizontal className="h-3.5 w-3.5 text-gray-500" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent side="bottom" align="start" className="w-56">
-                        <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                          <Star className="h-4 w-4" />
-                          Add to &apos;My favorites&apos;
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => setRenamingViewId(v.id)}>
-                          <Pencil className="h-4 w-4" />
-                          Rename view
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                          <Copy className="h-4 w-4" />
-                          Duplicate view
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer gap-3 px-3 py-2 text-red-600 focus:text-red-600"
-                          disabled={(tableData?.views?.length ?? 0) <= 1}
-                          onClick={() => deleteView.mutate({ id: v.id })}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete view
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>}
-
-          {/* Grid */}
           <div className="h-full min-w-0 flex-1">
-            {activeTableId && (
+            {isRealTableId && (
               <VirtualizedTable
                 tableId={activeTableId}
-                columns={visibleColumns}
-                search={search || undefined}
-                filters={filters}
-                sorts={sorts}
+                columns={viewConfig.visibleColumns}
+                search={viewConfig.search || undefined}
+                filters={viewConfig.filters}
+                sorts={viewConfig.sorts}
                 onAddSort={(columnId, direction) => {
-                  const next = [...sorts.filter((s) => s.columnId !== columnId), { columnId, direction }];
-                  handleSortsChange(next);
+                  const next = [...viewConfig.sorts.filter((s) => s.columnId !== columnId), { columnId, direction }];
+                  viewConfig.handleSortsChange(next);
                 }}
                 onAddFilter={(columnId) => {
-                  if (!filters.some((f) => f.columnId === columnId)) {
-                    handleFiltersChange([...filters, { columnId, operator: "contains", value: null }]);
+                  if (!viewConfig.filters.some((f) => f.columnId === columnId)) {
+                    viewConfig.handleFiltersChange([...viewConfig.filters, { columnId, operator: "contains", value: null }]);
                   }
                 }}
                 onHideColumn={(columnId) => {
-                  if (!hiddenColumns.includes(columnId)) {
-                    handleHiddenColumnsChange([...hiddenColumns, columnId]);
+                  if (!viewConfig.hiddenColumns.includes(columnId)) {
+                    viewConfig.handleHiddenColumnsChange([...viewConfig.hiddenColumns, columnId]);
                   }
                 }}
               />
@@ -778,139 +209,6 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         </div>
       </div>
     </main>
-  );
-}
-
-/* ─── small helpers ─── */
-function SidebarIcon({ icon: Icon }: { icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }) {
-  return (
-    <div className="flex items-center justify-center p-2 rounded-md cursor-pointer hover:bg-gray-100 transition-colors">
-      <Icon className="h-4 w-4 text-gray-600" strokeWidth={1.5} />
-    </div>
-  );
-}
-
-const BASE_COLOR_GRID = [
-  // Light
-  ["#fce4ec", "#fbe9e7", "#fff3e0", "#f1f8e9", "#e0f2f1", "#e0f7fa", "#e3f2fd", "#fce4ec", "#f3e5f5", "#eceff1"],
-  // Medium
-  ["#e53935", "#e64a19", "#f9a825", "#2e7d32", "#00897b", "#00bcd4", "#1565c0", "#d81b60", "#7b1fa2", "#616161"],
-  // Dark
-  ["#880e4f", "#bf360c", "#f57f17", "#1b5e20", "#004d40", "#006064", "#0d47a1", "#ad1457", "#4a148c", "#424242"],
-];
-
-function BasePopoverPanel({
-  base,
-  onRename,
-  onDelete,
-}: {
-  base: { name: string };
-  onRename: (name: string) => void;
-  onDelete: () => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(true);
-
-  return (
-    <div className="max-h-[80vh] overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-5 pt-5 pb-3">
-        <input
-          ref={inputRef}
-          defaultValue={base.name}
-          className="flex-1 text-xl font-bold outline-none bg-transparent rounded px-1 -mx-1 border-2 border-transparent focus:border-blue-500 transition-colors"
-          onBlur={(e) => {
-            const val = e.currentTarget.value.trim();
-            if (val && val !== base.name) onRename(val);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.currentTarget.blur();
-          }}
-        />
-        <button className="p-1 rounded hover:bg-gray-100">
-          <Star className="h-5 w-5 text-gray-400" />
-        </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="p-1 rounded hover:bg-gray-100">
-              <MoreHorizontal className="h-5 w-5 text-gray-400" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="bottom" align="end" className="w-48">
-            <DropdownMenuItem onClick={() => inputRef.current?.focus()}>
-              <Pencil className="h-4 w-4" />
-              Rename
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete}>
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="border-t border-gray-200 mx-5" />
-
-      {/* Appearance */}
-      <div className="px-5 py-3">
-        <button
-          className="flex items-center gap-2 w-full cursor-pointer"
-          onClick={() => setAppearanceOpen(!appearanceOpen)}
-        >
-          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${appearanceOpen ? "" : "-rotate-90"}`} />
-          <span className="text-base font-bold">Appearance</span>
-        </button>
-
-        {appearanceOpen && (
-          <div className="mt-3">
-            <div className="flex gap-4 mb-3 border-b border-gray-200">
-              <span className="text-sm font-medium pb-2 border-b-2 border-blue-600 cursor-pointer">Color</span>
-              <span className="text-sm text-gray-400 pb-2 cursor-pointer hover:text-gray-600">Icon</span>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {BASE_COLOR_GRID.map((row, ri) => (
-                <div key={ri} className="flex gap-1.5">
-                  {row.map((color, ci) => (
-                    <button
-                      key={ci}
-                      className="h-6 w-6 rounded cursor-pointer hover:ring-2 hover:ring-gray-300 transition-all shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-gray-200 mx-5" />
-
-      {/* Base guide */}
-      <div className="px-5 py-3 pb-5">
-        <button
-          className="flex items-center gap-2 w-full cursor-pointer"
-          onClick={() => setGuideOpen(!guideOpen)}
-        >
-          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${guideOpen ? "" : "-rotate-90"}`} />
-          <span className="text-base font-bold">Base guide</span>
-        </button>
-
-        {guideOpen && (
-          <div className="mt-3 text-sm text-gray-500 space-y-3">
-            <p>Use this space to share the goals and details of your base with your team.</p>
-            <p>Start by outlining your goal.</p>
-            <p>Next, share details about key information in your base:</p>
-            <p>This table contains...</p>
-            <p>This view shows...</p>
-            <p>This link contains...</p>
-            <p>Teammates will see this guide when they first open the base and can find it anytime by clicking the down arrow on the top of their screen.</p>
-          </div>
-        )}
-      </div>
-    </div>
   );
 }
 

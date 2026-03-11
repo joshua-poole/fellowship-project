@@ -34,6 +34,7 @@ export const baseRouter = createTRPCRouter({
         select: {
           id: true,
           name: true,
+          color: true,
           lastOpenedAt: true,
           tables: {
             select: { id: true, name: true, order: true },
@@ -100,8 +101,8 @@ export const baseRouter = createTRPCRouter({
 
       return await ctx.db.base.update({
         where: { id: input.id },
-        data: { name: input.name },
-        select: { id: true, name: true },
+        data: { name: input.name, color: input.color },
+        select: { id: true, name: true, color: true },
       });
     }),
 

@@ -6,8 +6,9 @@ export type Row = z.infer<typeof RowModelSchema>;
 // Cell values stored as { [columnId]: string | number }
 const CellValuesSchema = z.record(z.string(), z.union([z.string(), z.number()]));
 
-export const RowGetByTableInputSchema = z.object({
-  tableId: z.string(),
+export const RowGetByTableInputSchema = RowModelSchema.pick({
+  tableId: true,
+}).extend({
   cursor: z.object({
     order: z.number().int(),
     limit: z.number().int().min(1).max(50000),
@@ -39,6 +40,8 @@ export const RowGetByTableInputSchema = z.object({
       }),
     )
     .optional(),
+  // tRPC infinite queries inject a `direction` field automatically
+  direction: z.enum(["forward", "backward"]).optional(),
 });
 
 export const RowGetByTableOutputSchema = z.object({
@@ -56,8 +59,9 @@ export const RowGetByTableOutputSchema = z.object({
   }).optional(),
 });
 
-export const RowCreateInputSchema = z.object({
-  tableId: z.string(),
+export const RowCreateInputSchema = RowModelSchema.pick({
+  tableId: true,
+}).extend({
   values: CellValuesSchema.optional(),
 });
 
@@ -68,8 +72,9 @@ export const RowCreateOutputSchema = RowModelSchema.pick({
   values: CellValuesSchema,
 });
 
-export const RowBulkCreateInputSchema = z.object({
-  tableId: z.string(),
+export const RowBulkCreateInputSchema = RowModelSchema.pick({
+  tableId: true,
+}).extend({
   count: z.number().int().min(1).max(100000),
 });
 
@@ -89,8 +94,8 @@ export const RowUpdateCellOutputSchema = RowModelSchema.pick({
   values: CellValuesSchema,
 });
 
-export const RowDeleteInputSchema = z.object({
-  id: z.string(),
+export const RowDeleteInputSchema = RowModelSchema.pick({
+  id: true,
 });
 
 export const RowDeleteOutputSchema = z.boolean();

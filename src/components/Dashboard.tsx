@@ -146,7 +146,7 @@ export function Dashboard() {
                         <RenameInput
                           defaultValue={base.name}
                           onSubmit={(name) => {
-                            if (name && name !== base.name) renameBase.mutate({ id: base.id, name });
+                            if (name && name !== base.name) renameBase.mutate({ id: base.id, name, color: null });
                             setRenamingId(null);
                           }}
                         />

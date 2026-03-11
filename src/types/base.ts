@@ -10,13 +10,14 @@ export const BaseGetAllOutputSchema = BaseModelSchema.pick({
   lastOpenedAt: true,
 });
 
-export const BaseGetByIdInputSchema = z.object({
-  id: z.string()
+export const BaseGetByIdInputSchema = BaseModelSchema.pick({
+  id: true
 });
 
 export const BaseGetByIdOutputSchema = BaseModelSchema.pick({
   id: true,
   name: true,
+  color: true,
   lastOpenedAt: true,
 }).extend({
   tables: z.array(TableModelSchema.pick({
@@ -34,19 +35,20 @@ export const BaseCreateOutputSchema = BaseModelSchema.pick({
   id: true,
 });
 
-export const BaseDeleteInputSchema = z.object({
-  id: z.string(),
+export const BaseDeleteInputSchema = BaseModelSchema.pick({
+  id: true
 });
 
-export const BaseUpdateInputSchema = z.object({
-  id: z.string(),
-  name: z.string()
+export const BaseUpdateInputSchema = BaseModelSchema.pick({
+  id: true,
+  name: true,
+  color: true,
 });
 
 export const BaseUpdateOutputSchema = BaseModelSchema.pick({
   id: true,
   name: true,
-
+  color: true,
 });
 
 export const BaseDeleteOutputSchema = z.boolean();
