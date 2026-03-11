@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api } from "~/trpc/react";
 import { useTableVirtualizer } from "~/components/VirtualizedTable";
+import type { EditableCellProps } from "~/types/Props";
 
 // Survives component remounts — stores edited values until server data catches up
 const pendingEdits = new Map<string, string>();
@@ -24,18 +25,6 @@ function HighlightedText({ text, search }: { text: string; search: string }) {
       )}
     </>
   );
-}
-
-interface EditableCellProps {
-  tableId: string;
-  rowId: string;
-  columnId: string;
-  columnType: string;
-  initialValue: string;
-  isFirstRow?: boolean;
-  isFirstCol?: boolean;
-  isLastCol?: boolean;
-  search?: string;
 }
 
 export function EditableCell({

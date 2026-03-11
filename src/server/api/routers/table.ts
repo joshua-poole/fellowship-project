@@ -10,7 +10,7 @@ import {
   TableUpdateOutputSchema,
   TableDeleteInputSchema,
   TableDeleteOutputSchema,
-} from "~/types/table";
+} from "~/types/schemas/table";
 
 export const tableRouter = createTRPCRouter({
   getById: protectedProcedure

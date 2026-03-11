@@ -43,7 +43,7 @@ function timeAgo(date: Date): string {
 
 export function Dashboard() {
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const { data: bases, isLoading } = api.base.getAll.useQuery();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { ColumnModelSchema } from "generated/zod/schemas/variants/pure/Column.pure";
-import { ColumnTypeSchema } from "generated/zod/schemas/enums/ColumnType.schema";
 
 export type Column = z.infer<typeof ColumnModelSchema>;
 

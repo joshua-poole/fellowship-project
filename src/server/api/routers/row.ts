@@ -12,20 +12,10 @@ import {
   RowUpdateCellOutputSchema,
   RowDeleteInputSchema,
   RowDeleteOutputSchema,
-} from "~/types/row";
+} from "~/types/schemas/row";
+import type { RowFilter } from "~/types/Props";
 
-type RowFilter = {
-  columnId: string;
-  operator: string;
-  value?: string | number;
-};
 
-function numericIfPossible(value: string | number | undefined): string | number | undefined {
-  if (value == null) return value;
-  if (typeof value === "number") return value;
-  const n = Number(value);
-  return !isNaN(n) && value.trim() !== "" ? n : value;
-}
 
 function buildRawFilterCondition(
   filter: RowFilter,

@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import type { TableTabsBarProps } from "~/types/Props";
 
 /** Derive a very light tint from a hex color (e.g. #407c4a -> #e6fce8) */
 function lightTint(hex: string, lightness = 0.92): string {
@@ -30,16 +31,6 @@ function lightTint(hex: string, lightness = 0.92): string {
   const b = parseInt(hex.slice(5, 7), 16) / 255;
   const mix = (c: number) => Math.round((c * (1 - lightness) + lightness) * 255);
   return `#${[mix(r), mix(g), mix(b)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-}
-
-interface TableTabsBarProps {
-  tables: { id: string; name: string; order: number }[];
-  activeTableId: string | undefined;
-  baseColor: string | null;
-  onSelectTable: (id: string) => void;
-  onCreateTable: () => void;
-  onDeleteTable: (id: string, name: string) => void;
-  isCreating: boolean;
 }
 
 export function TableTabsBar({

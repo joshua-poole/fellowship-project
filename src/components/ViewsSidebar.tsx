@@ -19,23 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-
-type ViewItem = {
-  id: string;
-  name: string;
-  type: string;
-  order: number;
-};
-
-interface ViewsSidebarProps {
-  views: ViewItem[];
-  activeViewId: string | undefined;
-  onSelectView: (id: string) => void;
-  onCreateView: () => void;
-  onRenameView: (id: string, name: string) => void;
-  onDeleteView: (id: string) => void;
-  isCreating: boolean;
-}
+import type { ViewsSidebarProps } from "~/types/Props";
 
 export function ViewsSidebar({
   views,

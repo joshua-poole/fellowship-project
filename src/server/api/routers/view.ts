@@ -11,7 +11,7 @@ import {
   ViewUpdateOutputSchema,
   ViewDeleteInputSchema,
   ViewDeleteOutputSchema,
-} from "~/types/view";
+} from "~/types/schemas/view";
 
 type ViewOutput = z.infer<typeof ViewCreateOutputSchema>;
 

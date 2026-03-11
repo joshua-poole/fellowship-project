@@ -10,7 +10,7 @@ import {
   ColumnUpdateOutputSchema,
   ColumnDeleteInputSchema,
   ColumnDeleteOutputSchema,
-} from "~/types/column";
+} from "~/types/schemas/column";
 
 export const columnRouter = createTRPCRouter({
   getByTable: protectedProcedure
@@ -67,7 +67,7 @@ export const columnRouter = createTRPCRouter({
         newOrder = (last?.order ?? -1) + 1;
       }
 
-      const { order: _, ...rest } = input;
+      const { order: _order, ...rest } = input;
       return await ctx.db.column.create({
         data: {
           ...rest,

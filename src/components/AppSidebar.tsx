@@ -26,6 +26,7 @@ import {
 import { OmniBaseView } from "./icons/OmniBaseView";
 import { LogoIcon } from "./Logo";
 import { Bell as BellIcon } from "lucide-react";
+import type { AppSidebarProps } from "~/types/Props";
 
 const AVATAR_COLORS = [
   "bg-teal-300", "bg-rose-300", "bg-violet-300", "bg-sky-300",
@@ -36,11 +37,6 @@ function hashColor(id: string, colors: string[]) {
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
   return colors[Math.abs(hash) % colors.length]!;
-}
-
-interface AppSidebarProps {
-  session: { user?: { id?: string; name?: string | null; email?: string | null } } | null | undefined;
-  onSignOut: () => void;
 }
 
 export function AppSidebar({ session, onSignOut }: AppSidebarProps) {

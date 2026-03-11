@@ -10,7 +10,7 @@ import {
   BaseUpdateOutputSchema,
   BaseDeleteInputSchema,
   BaseDeleteOutputSchema,
-} from "~/types/base";
+} from "~/types/schemas/base";
 import { z } from "zod";
 import { baseId, tableId, columnId, viewId } from "~/lib/ids";
 

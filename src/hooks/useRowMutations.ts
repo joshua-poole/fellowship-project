@@ -1,8 +1,6 @@
 import { api } from "~/trpc/react";
 import { rowId } from "~/lib/ids";
-
-type RowData = { id: string; order: number; values: Record<string, string | number> };
-type QueryInput = { tableId: string; limit?: number; [key: string]: unknown };
+import type { QueryInput, RowData } from "~/types/Props";
 
 export function useRowMutations(tableId: string, queryInput: QueryInput) {
   const utils = api.useUtils();

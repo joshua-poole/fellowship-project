@@ -10,6 +10,7 @@ import {
 } from "~/components/ui/popover";
 import { LogoIcon } from "./Logo";
 import { BasePopoverPanel } from "./BasePopoverPanel";
+import type { BaseNavbarProps } from "~/types/Props";
 
 const BASE_COLORS = [
   "bg-blue-600", "bg-emerald-600", "bg-purple-600", "bg-rose-600",
@@ -24,17 +25,6 @@ function hashColor(id: string, colors: string[]) {
 }
 
 const TABS = ["Data", "Automations", "Interfaces", "Forms"] as const;
-
-interface BaseNavbarProps {
-  base: { name: string };
-  baseId: string;
-  baseColor: string | null;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-  onRenameBase: (name: string) => void;
-  onColorChange: (color: string) => void;
-  onDeleteBase: () => void;
-}
 
 export function BaseNavbar({ base, baseId, baseColor, activeTab, onTabChange, onRenameBase, onColorChange, onDeleteBase }: BaseNavbarProps) {
   const [basePopoverOpen, setBasePopoverOpen] = useState(false);

@@ -55,47 +55,13 @@ import {
   PopoverContent,
 } from "~/components/ui/popover";
 import { rowId } from "~/lib/ids";
-import { type RowGetByTableInputSchema } from '../types/row';
-import type z from "zod";
-
-type RowData = { id: string; order: number; values: Record<string, string | number> };
-type ColDef = { id: string; name: string; type: string; order: number };
-
-interface TableVirtualizerContextValue {
-  scrollToIndex: (index: number) => void;
-  rowCount: number;
-  queryInput: TableQueryInput;
-}
+import type { RowData, TableQueryInput, TableVirtualizerContextValue, VirtualizedTableProps } from "~/types/Props";
 
 const TableVirtualizerContext = createContext<TableVirtualizerContextValue | null>(null);
 
 export function useTableVirtualizer() {
   return useContext(TableVirtualizerContext);
 }
-
-interface ViewFilter {
-  columnId: string;
-  operator: string;
-  value?: string | number | null;
-}
-
-interface ViewSort {
-  columnId: string;
-  direction: "asc" | "desc";
-}
-
-interface VirtualizedTableProps {
-  tableId: string;
-  columns: ColDef[];
-  search?: string;
-  filters?: ViewFilter[];
-  sorts?: ViewSort[];
-  onAddSort?: (columnId: string, direction: "asc" | "desc") => void;
-  onAddFilter?: (columnId: string) => void;
-  onHideColumn?: (columnId: string) => void;
-}
-
-type TableQueryInput = z.infer<typeof RowGetByTableInputSchema>;
 
 const COLUMN_TYPES = [
   { value: "TEXT", label: "Text", icon: ALargeSmall },
@@ -614,7 +580,8 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
                   {row.getVisibleCells().filter((cell) => cell.column.id !== "_addCol").map((cell, colIndex) => (
                     <td
                       key={cell.id}
-                      className={`border-b border-r border-(--colors-border-default) focus-within:border-transparent shrink-0 ${colIndex === 0 ? "p-0 overflow-hidden" : "flex items-center px-1.5"} bg-white relative`}
+                      // TODO: Change the first row of cells to now have a border-r
+                      className={`border-b ${cell.id ? 'border-r' : ''} border-(--colors-border-default) focus-within:border-transparent shrink-0 ${colIndex === 0 ? "p-0 overflow-hidden" : "flex items-center px-1.5"} bg-white relative`}
                       style={{ display: "flex", width: cell.column.getSize(), height: ROW_HEIGHT }}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -626,6 +593,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
           </tbody>
         </table>
 
+        {/* TODO: THERE should only be a border on the right of the first cell that is not a number */}
         {/* Ghost / add row */}
         <div
           className="flex items-center border-b border-r border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors bg-white"
@@ -773,7 +741,7 @@ function BulkCreateInput({ queryInput }: { queryInput: TableQueryInput }) {
         onClick={handleBulkInsert}
         disabled={isInserting || count < 1}
       >
-        {isInserting ? `Inserting... ${progress}%` : `+ rows`}
+        {isInserting ? `Inserting rows... ${progress}%` : `+ Add rows`}
       </button>
     </div>
   );

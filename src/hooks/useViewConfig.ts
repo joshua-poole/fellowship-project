@@ -1,25 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { FilterConfig, SortConfig } from "~/components/ViewToolbar";
-
-type ViewData = {
-  id: string;
-  search: string | null;
-  filters: { columnId: string; operator: string; value: string | null }[];
-  sorts: { columnId: string; direction: string }[];
-  hiddenColumns: { columnId: string }[];
-};
-
-type ColDef = { id: string; name: string; type: string; order: number };
-
-type ViewUpdatePayload = {
-  id: string;
-  search?: string | null;
-  name?: string;
-  order?: number;
-  filters?: { columnId: string; operator: "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt"; value?: string | null }[];
-  sorts?: { columnId: string; direction: "asc" | "desc"; order?: number }[];
-  hiddenColumns?: string[];
-};
+import type { ColDef, ViewData, ViewUpdatePayload } from "~/types/Props";
 
 export function useViewConfig(
   activeView: ViewData | undefined,

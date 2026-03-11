@@ -15,8 +15,7 @@ import {
   X,
   Plus,
 } from "lucide-react";
-
-type ColDef = { id: string; name: string; type: string };
+import type { ColDef } from "~/types/Props";
 
 export type FilterConfig = {
   columnId: string;
@@ -149,7 +148,7 @@ export function FilterPopover({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-auto min-w-[420px] max-w-[600px] p-3">
+      <PopoverContent align="end" className="w-auto min-w-105 max-w-150 p-3">
         <div className="space-y-2">
           <div className="text-sm font-medium mb-2">Filter</div>
 
@@ -177,7 +176,7 @@ export function FilterPopover({
                       value: "",
                     });
                   }}
-                  className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none min-w-[100px]"
+                  className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none min-w-25"
                 >
                   {columns.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -206,7 +205,7 @@ export function FilterPopover({
                       updateFilter(i, { value: e.target.value })
                     }
                     placeholder="Enter a value"
-                    className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none flex-1 min-w-[80px]"
+                    className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none flex-1 min-w-20"
                   />
                 )}
                 <button
@@ -278,7 +277,7 @@ export function SortPopover({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-auto min-w-[360px] p-3">
+      <PopoverContent align="end" className="w-auto min-w-90 p-3">
         <div className="space-y-2">
           <div className="text-sm font-medium mb-2">Sort</div>
 
@@ -301,7 +300,7 @@ export function SortPopover({
                   onChange={(e) =>
                     updateSort(i, { columnId: e.target.value })
                   }
-                  className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none min-w-[100px]"
+                  className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none min-w-25"
                 >
                   {columns.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -386,7 +385,7 @@ export function HideFieldsPopover({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[260px] p-3">
+      <PopoverContent align="end" className="w-65 p-3">
         <div className="space-y-1">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Fields</span>

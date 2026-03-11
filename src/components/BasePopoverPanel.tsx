@@ -15,20 +15,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import type { BasePopoverPanelProps } from "~/types/Props";
 
 const BASE_COLOR_GRID = [
   ["#fce4ec", "#fbe9e7", "#fff3e0", "#f1f8e9", "#e0f2f1", "#e0f7fa", "#e3f2fd", "#fce4ec", "#f3e5f5", "#eceff1"],
   ["#e53935", "#e64a19", "#f9a825", "#2e7d32", "#00897b", "#00bcd4", "#1565c0", "#d81b60", "#7b1fa2", "#616161"],
   ["#880e4f", "#bf360c", "#f57f17", "#1b5e20", "#004d40", "#006064", "#0d47a1", "#ad1457", "#4a148c", "#424242"],
 ];
-
-interface BasePopoverPanelProps {
-  base: { name: string };
-  selectedColor: string | null;
-  onRename: (name: string) => void;
-  onColorChange: (color: string) => void;
-  onDelete: () => void;
-}
 
 export function BasePopoverPanel({ base, selectedColor, onRename, onColorChange, onDelete }: BasePopoverPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
