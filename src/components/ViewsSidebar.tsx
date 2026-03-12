@@ -33,18 +33,18 @@ export function ViewsSidebar({
   const [renamingViewId, setRenamingViewId] = useState<string | null>(null);
 
   return (
-    <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-1 py-1.25" style={{ width: 280 }}>
-      <div className="flex flex-col pb-2">
-        <div className="flex-none pb-1">
-          <button
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-sm rounded-md hover:bg-(--colors-background-selected-hover) cursor-pointer transition-colors"
-            onClick={onCreateView}
-            disabled={isCreating}
-          >
-            <Plus className="h-4 w-4 shrink-0" />
-            <span className="truncate">Create new...</span>
-          </button>
-        </div>
+    // sidebar
+    <div className="shrink-0 border-r border-(--colors-border-default) flex flex-col px-2 py-2.5" style={{ width: 280 }}>
+      {/* top part */}
+      <div className="flex-none flex flex-col justify-start pb-2">
+        <button
+          className="w-full items-center flex justify-start h-8 px-3 text-sm rounded-md hover:bg-(--colors-background-selected-hover) cursor-pointer transition-colors"
+          onClick={onCreateView}
+          disabled={isCreating}
+        >
+          <Plus className="h-4 w-4 shrink-0 flex-none mr-2" />
+          <span className="truncate">Create new...</span>
+        </button>
 
         <div className="flex-none mt-1">
           <div className="relative focus-within:rounded-md focus-within:shadow-[inset_0_0_0_2px_rgb(22,110,225)]">
@@ -52,7 +52,7 @@ export function ViewsSidebar({
             <input
               type="text"
               placeholder="Find a view"
-              className="py-1.5 pl-9 pr-7.5 h-8 w-65.75 text-xs outline-none bg-transparent placeholder:text-gray-400 focus:border-red-600"
+              className="h-8 py-1.5 pl-9 pr-7.5 w-full text-sm outline-none bg-transparent placeholder:text-gray-400 focus:border-red-600"
             />
             <div className="h-4 w-7 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2">
               <Settings className="h-4 w-4 text-black cursor-pointer transform rotate-30" strokeWidth={1.5} />
@@ -94,7 +94,7 @@ export function ViewsSidebar({
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <span className={`truncate text-sm ${v.id === activeViewId ? "font-semibold" : ""}`}>
+                  <span className={`truncate text-sm font-medium`}>
                     {v.name}
                   </span>
                 )}

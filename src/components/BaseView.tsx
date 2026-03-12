@@ -162,9 +162,12 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
             <button className="h-8 w-8 rounded-sm hover:bg-gray-100 mr-1 flex items-center justify-center cursor-pointer" style={{ padding: 0 }} onClick={() => setViewsSidebarOpen((o) => !o)}>
               <Menu className="h-4 w-4 text-gray-500" />
             </button>
-            <button className="flex items-center gap-1 px-2 py-1 text-sm hover:bg-gray-100 rounded-sm">
+            <button className="flex items-center px-2 py-0  h-6.5 text-sm hover:bg-gray-100 rounded-sm">
               <GridFeatureIcon className="h-4 w-4" style={{ color: "rgb(22, 110, 225)" }} />
-              {activeView?.name ?? "Grid view"} <ChevronDown className="h-3 w-3 text-gray-400" />
+              <span className="flex-auto mx-2 font-medium">
+                {activeView?.name ?? "Grid view"} 
+              </span>
+              <ChevronDown className="mt-1 flex-none h-4 w-4 text-gray-400" />
             </button>
           </div>
 

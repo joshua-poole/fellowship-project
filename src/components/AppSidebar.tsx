@@ -43,29 +43,31 @@ export function AppSidebar({ session, onSignOut }: AppSidebarProps) {
   const router = useRouter();
 
   return (
-    <aside className="flex shrink-0 flex-col items-center justify-between bg-white border-r border-(--colors-border-default) py-2 px-2" style={{ width: 56 }}>
-      <div className="flex flex-col items-center gap-1">
+    <aside className="flex shrink-0 flex-col items-center justify-between bg-white border-r border-(--colors-border-default) py-4 px-2" style={{ width: 56 }}>
+      <div className="flex flex-none flex-col items-center gap-4">
         <div
-          className="group flex h-9 w-9 items-center justify-center rounded-md cursor-pointer transition-colors hover:bg-gray-100"
+          className="group flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition-colors hover:bg-gray-100"
           onClick={() => router.push("/")}
         >
-          <span className="group-hover:hidden [&_svg]:h-6 [&_svg]:w-6 [&_path]:fill-black!">
+          <span className="group-hover:hidden [&_svg]:h-6 [&_svg]:w-6 [&_path]:fill-black! flex flex-none">
             <LogoIcon />
           </span>
           <ArrowLeft className="h-5 w-5 hidden group-hover:block text-gray-600" />
         </div>
-        <div className="flex items-center justify-center p-2 rounded-md cursor-pointer hover:bg-gray-100">
+        <div className="flex items-center h-7 justify-center px-2 rounded-md cursor-pointer hover:bg-gray-100">
           <OmniBaseView />
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-2 mb-2">
+      <div className="flex flex-auto flex-col items-center justify-end gap-3">
         <SidebarIcon icon={CircleQuestionMark} />
         <SidebarIcon icon={BellIcon} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className={`flex h-7 w-7 items-center justify-center rounded-full ${hashColor(session?.user?.id ?? "", AVATAR_COLORS)} cursor-pointer select-none`}>
-              <span className="text-sm font-medium text-black">{session?.user?.name?.charAt(0).toUpperCase()}</span>
+            <div className="-ml-2">
+              <div className={`flex-none flex h-7 w-7 ml-2 items-center justify-center rounded-full ${hashColor(session?.user?.id ?? "", AVATAR_COLORS)} cursor-pointer select-none`}>
+                <span className="text-sm font-medium text-black">{session?.user?.name?.charAt(0).toUpperCase()}</span>
+              </div>
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="right" className="min-w-76 p-5">
@@ -98,7 +100,7 @@ export function AppSidebar({ session, onSignOut }: AppSidebarProps) {
 
 function SidebarIcon({ icon: Icon }: { icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }) {
   return (
-    <div className="flex items-center justify-center p-2 rounded-md cursor-pointer hover:bg-gray-100 transition-colors">
+    <div className="flex w-7 h-7 items-center rounded-full justify-center flex-reverse cursor-pointer hover:bg-gray-100 transition-colors">
       <Icon className="h-4 w-4 text-gray-600" strokeWidth={1.5} />
     </div>
   );

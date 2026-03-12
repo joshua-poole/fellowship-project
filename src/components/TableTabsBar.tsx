@@ -45,8 +45,8 @@ export function TableTabsBar({
   const tableBarBg = baseColor ? lightTint(baseColor) : "#f1f5ff";
 
   return (
-    <div className="relative flex items-center justify-between shrink-0 border-b border-(--colors-border-default) w-full" style={{ height: 32, backgroundColor: tableBarBg }}>
-      <div className="flex items-stretch h-full overflow-visible">
+    <div className="relative flex items-center justify-between shrink-0 border-b border-t border-(--colors-border-default) w-full" style={{ height: 34, backgroundColor: tableBarBg }}>
+      <div className="flex items-stretch h-full overflow-visible -ml-px">
         {tables.map((t, index) => {
           const isActive = t.id === activeTableId;
           const prevActive = index > 0 && tables[index - 1]?.id === activeTableId;
@@ -62,7 +62,7 @@ export function TableTabsBar({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className="relative flex items-center text-sm transition-colors cursor-pointer bg-white font-medium rounded-tr-sm border-x border-t border-(--colors-border-default) -mt-px z-10"
+                      className={`relative flex items-center text-sm transition-colors cursor-pointer bg-white font-medium rounded-tr-sm ${index > 0 ? "rounded-tl-sm" : ""} border-x border-t border-(--colors-border-default) -mt-px z-10`}
                       style={{ paddingLeft: 12, paddingRight: 32, marginBottom: -1, paddingBottom: 1 }}
                     >
                       {t.name}
@@ -105,24 +105,26 @@ export function TableTabsBar({
             <div style={{ height: 12, width: 1, backgroundColor: "rgba(0, 0, 0, 0.1)" }} />
           </div>
         )}
-        <button className="h-8 w-10 flex items-center gap-1 transition-colors px-3 cursor-pointer">
-          <ChevronDown className="h-4 w-4 text-gray-500" />
+        <button className="h-8 flex flex-none justify-center items-center gap-1 transition-colors px-3 cursor-pointer">
+          <ChevronDown className="h-4 w-4 text-gray-500" strokeWidth={1}/>
         </button>
+
         <button
-          className="group flex items-center gap-1 px-1.5 transition-colors cursor-pointer"
+          className="group flex items-center px-3 transition-colors cursor-pointer gap-0"
           onClick={onCreateTable}
           disabled={isCreating}
           style={{ height: 32 }}
         >
-          <Plus className="h-4 w-4 text-gray-500 group-hover:text-black transition-colors" />
-          <span className="text-sm text-gray-500 group-hover:text-black ml-1 transition-colors">Add or import</span>
+          <Plus className="h-4 w-4 flex-none my-1 text-gray-500 group-hover:text-black transition-colors" strokeWidth={1.5}/>
+          <span className="text-sm text-gray-500 group-hover:text-black ml-2 transition-colors leading-tight">Add or import</span>
         </button>
       </div>
 
-      <div className="flex items-center">
-        <button className="flex items-center gap-1 px-3 text-sm text-gray-500" style={{ height: 32 }}>
-          Tools <ChevronDown className="h-4 w-4" />
+      <div className="flex items-center px-3 ml-2 mr-1">
+        <button className="flex items-center text-sm text-gray-500 h-8 pr-1">
+          Tools
         </button>
+        <ChevronDown className="h-4 w-4 flex-none" strokeWidth={1}/>
       </div>
     </div>
   );
