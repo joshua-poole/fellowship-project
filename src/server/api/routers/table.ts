@@ -27,6 +27,7 @@ export const tableRouter = createTRPCRouter({
           name: true,
           order: true,
           baseId: true,
+          rowCount: true,
           columns: {
             select: { id: true, name: true, type: true, order: true },
             orderBy: { order: "asc" },
@@ -84,6 +85,7 @@ export const tableRouter = createTRPCRouter({
           id: tableId(),
           name: input.name ?? `Table ${highestNum + 1}`,
           order: lastOrder + 1,
+          rowCount: 1,
           baseId: input.baseId,
           columns: {
             create: [

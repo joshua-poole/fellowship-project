@@ -14,6 +14,8 @@ import {
   EyeOff,
   X,
   Plus,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import type { ColDef } from "~/types/Props";
 
@@ -58,49 +60,86 @@ function getOperators(columns: ColDef[], columnId: string) {
 export function SearchBar({
   value,
   onChange,
+  matchCount,
+  currentMatch,
+  onNext,
+  onPrev,
 }: {
   value: string;
   onChange: (v: string) => void;
+  matchCount: number;
+  currentMatch: number;
+  onNext: () => void;
+  onPrev: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) inputRef.current?.focus();
+    if (isOpen) setTimeout(() => inputRef.current?.focus(), 0);
   }, [isOpen]);
 
-  if (!isOpen && !value) {
-    return (
-      <button
-        className="p-1.5 rounded-sm hover:bg-gray-100 ml-2"
-        onClick={() => setIsOpen(true)}
-      >
-        <Search className="h-3.5 w-3.5 text-gray-500" />
-      </button>
-    );
-  }
-
   return (
-    <div className="flex items-center gap-1 ml-2 border border-gray-300 rounded-sm px-1.5 py-0.5">
-      <Search className="h-3 w-3 text-gray-400 shrink-0" />
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Find in view"
-        className="text-xs outline-none bg-transparent w-36"
-      />
-      <button
-        onClick={() => {
-          onChange("");
-          setIsOpen(false);
-        }}
-        className="shrink-0"
+    <Popover open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      if (!open) onChange("");
+    }}>
+      <PopoverTrigger asChild>
+        <button
+          className={`w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 ${isOpen ? "bg-gray-100" : ""}`}
+        >
+          <Search className="h-4 w-4 text-gray-500" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        side="bottom"
+        sideOffset={4}
+        className="w-auto p-0 rounded-md shadow-md border border-gray-200"
       >
-        <X className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-      </button>
-    </div>
+        <div className="flex items-center gap-1 px-2 py-1.5">
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (e.shiftKey) { onPrev(); } else { onNext(); }
+              }
+              if (e.key === "Escape") setIsOpen(false);
+            }}
+            placeholder="Find in view"
+            className="text-sm outline-none bg-transparent w-36"
+          />
+          {value && (
+            <span className="text-sm text-gray-400 tabular-nums whitespace-nowrap shrink-0">
+              {matchCount > 0 ? `${currentMatch} of ${matchCount}` : "0 of 0"}
+            </span>
+          )}
+          <button
+            onClick={onPrev}
+            disabled={matchCount === 0}
+            className="shrink-0 p-0.5 rounded hover:bg-gray-100 disabled:opacity-30"
+          >
+            <ChevronUp className="h-4 w-4 text-gray-500" />
+          </button>
+          <button
+            onClick={onNext}
+            disabled={matchCount === 0}
+            className="shrink-0 p-0.5 rounded hover:bg-gray-100 disabled:opacity-30"
+          >
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          </button>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="shrink-0 p-0.5 rounded hover:bg-gray-100"
+          >
+            <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -138,9 +177,9 @@ export function FilterPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
-          <ListFilter className="h-3.5 w-3.5" />
-          <span className="hidden lg:inline">Filter</span>
+        <button className="flex items-center px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
+          <ListFilter className="h-4 w-4" />
+          <span className="hidden lg:inline ml-1">Filter</span>
           {filters.length > 0 && (
             <span className="bg-blue-100 text-blue-700 rounded-full px-1.5 text-[10px] font-medium">
               {filters.length}
@@ -153,7 +192,7 @@ export function FilterPopover({
           <div className="text-sm font-medium mb-2">Filter</div>
 
           {filters.length === 0 && (
-            <p className="text-xs text-gray-400 py-2">
+            <p className="text-sm text-gray-400 py-2">
               No filter conditions are applied to this view
             </p>
           )}
@@ -163,7 +202,7 @@ export function FilterPopover({
             const needsValue = !NO_VALUE_OPERATORS.has(filter.operator);
             return (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-10 shrink-0">
+                <span className="text-sm text-gray-500 w-10 shrink-0">
                   {i === 0 ? "Where" : "and"}
                 </span>
                 <select
@@ -176,7 +215,7 @@ export function FilterPopover({
                       value: "",
                     });
                   }}
-                  className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none min-w-25"
+                  className="text-sm border border-gray-200 rounded px-2 py-1.5 outline-none min-w-25"
                 >
                   {columns.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -189,7 +228,7 @@ export function FilterPopover({
                   onChange={(e) =>
                     updateFilter(i, { operator: e.target.value })
                   }
-                  className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none"
+                  className="text-sm border border-gray-200 rounded px-2 py-1.5 outline-none"
                 >
                   {operators.map((op) => (
                     <option key={op.value} value={op.value}>
@@ -205,14 +244,14 @@ export function FilterPopover({
                       updateFilter(i, { value: e.target.value })
                     }
                     placeholder="Enter a value"
-                    className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none flex-1 min-w-20"
+                    className="text-sm border border-gray-200 rounded px-2 py-1.5 outline-none flex-1 min-w-20"
                   />
                 )}
                 <button
                   onClick={() => removeFilter(i)}
                   className="shrink-0 p-1 rounded hover:bg-gray-100"
                 >
-                  <X className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+                  <X className="h-4 w-4 text-gray-400 hover:text-red-500" />
                 </button>
               </div>
             );
@@ -220,7 +259,7 @@ export function FilterPopover({
 
           <button
             onClick={addFilter}
-            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 pt-1"
+            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 pt-1"
           >
             <Plus className="h-3 w-3" />
             Add filter
@@ -267,9 +306,9 @@ export function SortPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
-          <ArrowDownUp className="h-3.5 w-3.5" />
-          <span className="hidden lg:inline">Sort</span>
+        <button className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
+          <ArrowDownUp className="h-4 w-4" />
+          <span className="hidden lg:inline ml-1">Sort</span>
           {sorts.length > 0 && (
             <span className="bg-blue-100 text-blue-700 rounded-full px-1.5 text-[10px] font-medium">
               {sorts.length}
@@ -282,7 +321,7 @@ export function SortPopover({
           <div className="text-sm font-medium mb-2">Sort</div>
 
           {sorts.length === 0 && (
-            <p className="text-xs text-gray-400 py-2">
+            <p className="text-sm text-gray-400 py-2">
               No sorts applied to this view
             </p>
           )}
@@ -292,7 +331,7 @@ export function SortPopover({
             const colType = col?.type ?? "TEXT";
             return (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-12 shrink-0">
+                <span className="text-sm text-gray-500 w-12 shrink-0">
                   {i === 0 ? "Sort by" : "then"}
                 </span>
                 <select
@@ -300,7 +339,7 @@ export function SortPopover({
                   onChange={(e) =>
                     updateSort(i, { columnId: e.target.value })
                   }
-                  className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none min-w-25"
+                  className="text-sm border border-gray-200 rounded px-2 py-1.5 outline-none min-w-25"
                 >
                   {columns.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -315,7 +354,7 @@ export function SortPopover({
                       direction: e.target.value as "asc" | "desc",
                     })
                   }
-                  className="text-xs border border-gray-200 rounded px-2 py-1.5 outline-none"
+                  className="text-sm border border-gray-200 rounded px-2 py-1.5 outline-none"
                 >
                   <option value="asc">
                     {sortDirectionLabel(colType, "asc")}
@@ -328,7 +367,7 @@ export function SortPopover({
                   onClick={() => removeSort(i)}
                   className="shrink-0 p-1 rounded hover:bg-gray-100"
                 >
-                  <X className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+                  <X className="h-4 w-4 text-gray-400 hover:text-red-500" />
                 </button>
               </div>
             );
@@ -337,7 +376,7 @@ export function SortPopover({
           {sorts.length < columns.length && (
             <button
               onClick={addSort}
-              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 pt-1"
+              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 pt-1"
             >
               <Plus className="h-3 w-3" />
               Add sort
@@ -375,9 +414,9 @@ export function HideFieldsPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
-          <EyeOff className="h-3.5 w-3.5" />
-          <span className="hidden lg:inline">Hide fields</span>
+        <button className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
+          <EyeOff className="h-4 w-4" />
+          <span className="hidden lg:inline ml-1">Hide fields</span>
           {hiddenColumns.length > 0 && (
             <span className="bg-blue-100 text-blue-700 rounded-full px-1.5 text-[10px] font-medium">
               {hiddenColumns.length}
@@ -410,7 +449,7 @@ export function HideFieldsPopover({
               key={col.id}
               className="flex items-center justify-between py-1 px-1 rounded hover:bg-gray-50"
             >
-              <span className="text-xs truncate mr-2">{col.name}</span>
+              <span className="text-sm truncate mr-2">{col.name}</span>
               <Switch
                 size="sm"
                 checked={!hiddenSet.has(col.id)}

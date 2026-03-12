@@ -94,6 +94,7 @@ model Table {
   id        String   @id
   name      String   @default("Table")
   order     Int      @default(0)
+  rowCount  Int      @default(0)
   baseId    String
   base      Base     @relation(fields: [baseId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())

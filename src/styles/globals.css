@@ -296,7 +296,19 @@
   --font-size-heading-large: 23px;
   --font-size-heading-xlarge: 27px;
   --font-size-heading-xxlarge: 31px;
-  --font-size-heading-xxxlarge: 35px
+  --font-size-heading-xxxlarge: 35px;
+  --cell-background-found: #fff3d3;
+  --cell-background-foundCursor: #ffd66b;
+  --cell-background-selected: #f1f6ff;
+  --row-background-cursor: #f8f8f8;
+  --cell-background-row-number-hover: hsl(200, 18%, 95%);
+  --cell-background-ghost-row-number-hover: hsl(200, 18%, 95%);
+  --cell-background-header: #f4f4f4;
+  --cell-background-fillCandidate-found: #f0e4c6;
+  --cell-background-fillCandidate-foundCursor: #f0c965;
+  --cell-background-searchMatch: #ffd66b;
+  --cell-background-found-selected: #f1ebd3;
+  --cell-background-foundCursor-selected: #f1cf6b
 }
 
 @media not print {

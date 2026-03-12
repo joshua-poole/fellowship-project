@@ -206,14 +206,20 @@ export const rowRouter = createTRPCRouter({
         select: { order: true },
       });
 
-      const row = await ctx.db.row.create({
-        data: {
-          id: rowId(),
-          tableId: input.tableId,
-          order: (last?.order ?? -1) + 1,
-          values: input.values ?? {},
-        },
-      });
+      const [row] = await ctx.db.$transaction([
+        ctx.db.row.create({
+          data: {
+            id: rowId(),
+            tableId: input.tableId,
+            order: (last?.order ?? -1) + 1,
+            values: input.values ?? {},
+          },
+        }),
+        ctx.db.table.update({
+          where: { id: input.tableId },
+          data: { rowCount: { increment: 1 } },
+        }),
+      ]);
 
       return { id: row.id, order: row.order, values: castValues(row.values) };
     }),
@@ -259,10 +265,16 @@ export const rowRouter = createTRPCRouter({
       }
       // TODO: use Promise.all to batch the inserts?
       // await Promise.all([]);
-      await ctx.db.$executeRawUnsafe(`
-        INSERT INTO "Row" ("id", "tableId", "order", "values", "updatedAt")
-        VALUES ${rowsSql.join(", ")};
-      `);
+      await ctx.db.$transaction([
+        ctx.db.$executeRawUnsafe(`
+          INSERT INTO "Row" ("id", "tableId", "order", "values", "updatedAt")
+          VALUES ${rowsSql.join(", ")};
+        `),
+        ctx.db.table.update({
+          where: { id: input.tableId },
+          data: { rowCount: { increment: input.count } },
+        }),
+      ]);
       return { count: input.count };
     }),
 
@@ -326,7 +338,13 @@ export const rowRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Row not found" });
       }
 
-      await ctx.db.row.delete({ where: { id: input.id } });
+      await ctx.db.$transaction([
+        ctx.db.row.delete({ where: { id: input.id } }),
+        ctx.db.table.update({
+          where: { id: row.tableId },
+          data: { rowCount: { decrement: 1 } },
+        }),
+      ]);
       return true;
     }),
 });

@@ -18,7 +18,7 @@ function HighlightedText({ text, search }: { text: string; search: string }) {
     <>
       {parts.map((part, i) =>
         regex.test(part) ? (
-          <mark key={i} className="bg-yellow-200 text-inherit rounded-sm">{part}</mark>
+          <mark key={i} className="text-inherit rounded-sm" style={{ backgroundColor: "var(--cell-background-searchMatch)" }}>{part}</mark>
         ) : (
           part
         ),
@@ -37,6 +37,7 @@ export function EditableCell({
   isFirstCol,
   isLastCol,
   search,
+  isActiveSearchMatch,
 }: EditableCellProps) {
   const cellKey = `${rowId}:${columnId}`;
 
@@ -202,6 +203,8 @@ export function EditableCell({
     }
   };
 
+  const isSearchMatch = !focused && !!search && !!value && value.toLowerCase().includes(search.toLowerCase());
+
   return (
     <>
       {focused && (
@@ -218,6 +221,12 @@ export function EditableCell({
             borderRight: `2px solid ${BORDER_COLOR}`,
             zIndex: 10,
           }}
+        />
+      )}
+      {isSearchMatch && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ backgroundColor: isActiveSearchMatch ? "var(--cell-background-foundCursor)" : "var(--cell-background-found)" }}
         />
       )}
       {!focused && search && value ? (

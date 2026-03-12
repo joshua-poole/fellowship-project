@@ -17,6 +17,7 @@ export const TableGetByIdOutputSchema = TableModelSchema.pick({
   name: true,
   order: true,
   baseId: true,
+  rowCount: true,
 }).extend({
   columns: z.array(
     ColumnModelSchema.pick({

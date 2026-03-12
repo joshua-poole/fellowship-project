@@ -116,6 +116,10 @@ export const columnRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Column not found" });
       }
 
+      if (column.order === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete the primary column" });
+      }
+
       await ctx.db.column.delete({ where: { id: input.id } });
       return true;
     }),

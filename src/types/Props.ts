@@ -35,6 +35,7 @@ export interface EditableCellProps {
   isFirstCol?: boolean;
   isLastCol?: boolean;
   search?: string;
+  isActiveSearchMatch?: boolean;
 }
 
 export interface TableTabsBarProps {
@@ -63,7 +64,10 @@ export type ColDef = { id: string; name: string; type: string; order: number };
 export interface VirtualizedTableProps {
   tableId: string;
   columns: ColDef[];
+  rowCount: number;
   search?: string;
+  searchMatchIndex?: number;
+  onSearchMatchCountChange?: (total: number) => void;
   filters?: ViewFilter[];
   sorts?: ViewSort[];
   onAddSort?: (columnId: string, direction: "asc" | "desc") => void;

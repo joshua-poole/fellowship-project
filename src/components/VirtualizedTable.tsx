@@ -72,7 +72,7 @@ const ROW_HEIGHT = 32;
 // TODO: Find optimal pagination limits for smooth experience
 const PAGE_LIMITS = [10000, 90000, 100000];
 
-export function VirtualizedTable({ tableId, columns, search, filters, sorts, onAddSort, onAddFilter, onHideColumn }: VirtualizedTableProps) {
+export function VirtualizedTable({ tableId, columns, rowCount, search, searchMatchIndex, onSearchMatchCountChange, filters, sorts, onAddSort, onAddFilter, onHideColumn }: VirtualizedTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
@@ -126,6 +126,37 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
     [rowPages],
   );
 
+  // Compute search match positions (cell-level)
+  const searchMatches = useMemo(() => {
+    if (!search) return [];
+    const lower = search.toLowerCase();
+    const matches: { rowIndex: number; columnId: string }[] = [];
+    for (let r = 0; r < rows.length; r++) {
+      for (const col of columns) {
+        const val = rows[r]?.values[col.id];
+        if (val != null && String(val).toLowerCase().includes(lower)) {
+          matches.push({ rowIndex: r, columnId: col.id });
+        }
+      }
+    }
+    return matches;
+  }, [search, rows, columns]);
+
+  useEffect(() => {
+    if (onSearchMatchCountChange) (onSearchMatchCountChange as (n: number) => void)(searchMatches.length);
+  }, [searchMatches.length, onSearchMatchCountChange]);
+
+  const scrollToRowRef = useRef<((index: number) => void) | null>(null);
+
+  // Scroll to current match
+  useEffect(() => {
+    if (searchMatchIndex == null || searchMatches.length === 0) return;
+    const match = searchMatches[searchMatchIndex % searchMatches.length];
+    if (match) {
+      scrollToRowRef.current?.(match.rowIndex);
+    }
+  }, [searchMatchIndex, searchMatches]);
+
   const utils = api.useUtils();
 
   const createRow = api.row.create.useMutation({
@@ -141,10 +172,19 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
           i === old.pages.length - 1 ? { ...page, rows: [...page.rows, optimisticRow] } : page
         )};
       });
+      // Optimistically increment rowCount
+      utils.table.getById.setData({ id: tid }, (old) => {
+        if (!old) return old;
+        return { ...old, rowCount: Number(old.rowCount) + 1 };
+      });
       return { prev, optimisticRow };
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) utils.row.getByTable.setInfiniteData(queryInput, ctx.prev);
+      utils.table.getById.setData({ id: tableId }, (old) => {
+        if (!old) return old;
+        return { ...old, rowCount: Number(old.rowCount) - 1 };
+      });
     },
     onSuccess: (newRow, _vars, ctx) => {
       utils.row.getByTable.setInfiniteData(queryInput, (old) => {
@@ -416,6 +456,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="cursor-pointer gap-3 px-3 py-2 text-red-500 focus:text-red-500"
+                    disabled={isFirstCol}
                     onClick={() => deleteColumn.mutate({ id: col.id })}
                   >
                     <Trash2 className="h-4 w-4" /> Delete field
@@ -435,19 +476,26 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
               </PopoverContent>
             </Popover>
           ),
-          cell: (info) => (
-            <EditableCell
-              tableId={tableId}
-              rowId={info.row.original.id}
-              columnId={col.id}
-              columnType={col.type}
-              initialValue={String(info.getValue())}
-              isFirstCol={isFirstCol}
-              isLastCol={isLastCol}
-              isFirstRow={info.row.index === 0}
-              search={search}
-            />
-          ),
+          cell: (info) => {
+            const activeMatch = searchMatches.length > 0 && searchMatchIndex != null
+              ? searchMatches[searchMatchIndex % searchMatches.length]
+              : null;
+            const isActive = activeMatch?.rowIndex === info.row.index && activeMatch?.columnId === col.id;
+            return (
+              <EditableCell
+                tableId={tableId}
+                rowId={info.row.original.id}
+                columnId={col.id}
+                columnType={col.type}
+                initialValue={String(info.getValue())}
+                isFirstCol={isFirstCol}
+                isLastCol={isLastCol}
+                isFirstRow={info.row.index === 0}
+                search={search}
+                isActiveSearchMatch={isActive}
+              />
+            );
+          },
           size: 180,
         }) as ColumnDef<RowData, unknown>,
       );
@@ -482,7 +530,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
     );
 
     return cols;
-  }, [columns, columnHelper, tableId, selectedRows, createColumn, rows, deleteColumn, onAddFilter, onAddSort, onHideColumn, editingColumnId, updateColumn, addColumnOpen, search]);
+  }, [columns, columnHelper, tableId, selectedRows, createColumn, rows, deleteColumn, onAddFilter, onAddSort, onHideColumn, editingColumnId, updateColumn, addColumnOpen, search, searchMatches, searchMatchIndex]);
 
   const table = useReactTable({
     data: rows,
@@ -508,6 +556,8 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
     overscan: 5,
   });
 
+  scrollToRowRef.current = (index: number) => rowVirtualizer.scrollToIndex(index, { align: "center" });
+
   const virtualizerContextValue = useMemo<TableVirtualizerContextValue>(() => ({
     scrollToIndex: (index: number) => rowVirtualizer.scrollToIndex(index, { align: "auto" }),
     rowCount: tableRows.length,
@@ -532,7 +582,8 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
         onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
         className="flex-1 min-w-0 overflow-auto relative"
       >
-        <table style={{ display: "grid" }} className="text-sm">
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+        <table style={{ display: "grid", flexShrink: 0 }} className="text-sm">
           {/* Header */}
           <thead
             style={{ display: "grid" }}
@@ -598,7 +649,7 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
         {/* Ghost / add row */}
         <div
           className="flex items-center border-b border-r border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors bg-white"
-          style={{ height: ROW_HEIGHT, width: dataColumnsWidth }}
+          style={{ height: ROW_HEIGHT, width: dataColumnsWidth, flexShrink: 0 }}
           onClick={() => createRow.mutate({ tableId })}
         >
           <div className="shrink-0 border-r border-(--colors-border-default) h-full w-21">
@@ -611,10 +662,15 @@ export function VirtualizedTable({ tableId, columns, search, filters, sorts, onA
         {isFetchingNextPage && (
           <div className="py-2 text-center text-xs text-gray-400">Loading more...</div>
         )}
+
+        {/* Filler to extend row number column border to bottom of container */}
+        <div className="flex flex-1 border-r w-21"/>
+        </div>
       </div>
 
       {/* Summary bar */}
       <div className="flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-7">
+        <span className="px-3 tabular-nums">{Number(rowCount).toLocaleString()} {rowCount === 1 ? "record" : "records"}</span>
         <BulkCreateInput queryInput={queryInput} />
       </div>
 

@@ -82,6 +82,23 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
     columns,
   );
 
+  // Search match navigation
+  const [searchMatchCount, setSearchMatchCount] = useState(0);
+  const [searchMatchIndex, setSearchMatchIndex] = useState(0);
+
+  // Reset match index when search changes
+  useEffect(() => {
+    setSearchMatchIndex(0);
+  }, [viewConfig.search]);
+
+  const handleSearchNext = useCallback(() => {
+    setSearchMatchIndex((i) => (searchMatchCount > 0 ? (i + 1) % searchMatchCount : 0));
+  }, [searchMatchCount]);
+
+  const handleSearchPrev = useCallback(() => {
+    setSearchMatchIndex((i) => (searchMatchCount > 0 ? (i - 1 + searchMatchCount) % searchMatchCount : 0));
+  }, [searchMatchCount]);
+
   const handleSignOut = async () => {
     await signOut();
     window.location.href = "/";
@@ -140,8 +157,8 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         />
 
         {/* Views Bar */}
-        <div className="flex h-12 items-center justify-between border-b border-(--colors-border-default) shrink-0">
-          <div className="pl-3 pr-2 flex items-center">
+        <div className="flex flex-none gap-2 h-12 items-center border-b border-(--colors-border-default) shrink-0">
+          <div className="pl-3 pr-2 flex flex-auto items-center">
             <button className="h-8 w-8 rounded-sm hover:bg-gray-100 mr-1 flex items-center justify-center cursor-pointer" style={{ padding: 0 }} onClick={() => setViewsSidebarOpen((o) => !o)}>
               <Menu className="h-4 w-4 text-gray-500" />
             </button>
@@ -151,15 +168,36 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
             </button>
           </div>
 
-          <div className="flex items-center gap-0.5 pr-2">
-            <HideFieldsPopover columns={columns} hiddenColumns={viewConfig.hiddenColumns} onHiddenColumnsChange={viewConfig.handleHiddenColumnsChange} />
-            <FilterPopover columns={columns} filters={viewConfig.filters} onFiltersChange={viewConfig.handleFiltersChange} />
-            <ToolbarButton icon={Group} label="Group" />
-            <SortPopover columns={columns} sorts={viewConfig.sorts} onSortsChange={viewConfig.handleSortsChange} />
-            <ToolbarButton icon={PaintBucket} label="Color" />
-            <ToolbarButton icon={RowHeightIcon} label="" />
-            <ToolbarButton icon={ExternalLink} label="Share and sync" />
-            <SearchBar value={viewConfig.search} onChange={viewConfig.handleSearchChange} />
+          <div className="flex flex-auto justify-end items-center h-full pr-2">
+            <div className="flex items-center px-2 grow justify-end">
+              <div className="flex flex-row mr-2">
+                <HideFieldsPopover columns={columns} hiddenColumns={viewConfig.hiddenColumns} onHiddenColumnsChange={viewConfig.handleHiddenColumnsChange} />
+                <FilterPopover columns={columns} filters={viewConfig.filters} onFiltersChange={viewConfig.handleFiltersChange} />
+              </div>
+              <div className="flex items-center">
+                <ToolbarButton icon={Group} label="Group" />
+                <SortPopover columns={columns} sorts={viewConfig.sorts} onSortsChange={viewConfig.handleSortsChange} />
+              </div>
+              <div className="">
+                <ToolbarButton icon={PaintBucket} label="Color"/>
+              </div>
+              <div className="flex iterms-center px-2 py-1 mr-2">
+                <RowHeightIcon className="h-4 w-4 flex-none" />
+              </div>
+              <div className="flex items-center">
+                <ToolbarButton icon={ExternalLink} label="Share and sync" />
+              </div>
+            </div>
+            <div className="flex items-center justify-center cursor-pointer">
+              <SearchBar
+                value={viewConfig.search}
+                onChange={viewConfig.handleSearchChange}
+                matchCount={searchMatchCount}
+                currentMatch={searchMatchCount > 0 ? searchMatchIndex + 1 : 0}
+                onNext={handleSearchNext}
+                onPrev={handleSearchPrev}
+              />
+            </div>
           </div>
         </div>
 
@@ -188,7 +226,10 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
               <VirtualizedTable
                 tableId={activeTableId}
                 columns={viewConfig.visibleColumns}
+                rowCount={Number(tableData?.rowCount ?? 0)}
                 search={viewConfig.search || undefined}
+                searchMatchIndex={searchMatchIndex}
+                onSearchMatchCountChange={setSearchMatchCount}
                 filters={viewConfig.filters}
                 sorts={viewConfig.sorts}
                 onAddSort={(columnId, direction) => {
@@ -216,9 +257,9 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
 
 function ToolbarButton({ icon: Icon, label }: { icon: React.ComponentType<{ className?: string }>; label: string }) {
   return (
-    <button className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
-      <Icon className="h-3.5 w-3.5" />
-      <span className="hidden lg:inline">{label}</span>
+    <button className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
+      <Icon className="h-4 w-4 flex-none" />
+      <span className="hidden lg:inline ml-1">{label}</span>
     </button>
   );
 }
