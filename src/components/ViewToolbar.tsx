@@ -17,6 +17,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
+import type React from "react";
 import type { ColDef } from "~/types/Props";
 
 export type FilterConfig = {
@@ -460,5 +461,16 @@ export function HideFieldsPopover({
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+/* ─── Toolbar Button ─── */
+
+export function ToolbarButton({ icon: Icon, label }: { icon: React.ComponentType<{ className?: string }>; label: string }) {
+  return (
+    <button className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
+      <Icon className="h-4 w-4 flex-none" />
+      <span className="hidden lg:inline ml-1">{label}</span>
+    </button>
   );
 }

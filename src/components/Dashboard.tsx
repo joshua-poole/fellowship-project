@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { DashboardCard } from "./DashboardCard";
-import { OmniIcon } from "./Omni";
+import { OmniIcon } from "./icons/Omni";
 import { Grid2x2Icon, Table, ArrowUp, ChevronDown, Menu, Grid2X2, Star, Ellipsis, Pencil, Copy, ArrowRight, Users, Palette, Trash2 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { useRouter } from "next/navigation";
