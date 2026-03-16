@@ -109,7 +109,6 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
 
         <ViewsToolbar
           activeViewName={activeView?.name ?? "Grid view"}
-          viewsSidebarOpen={viewsSidebarOpen}
           onToggleViewsSidebar={() => setViewsSidebarOpen((o) => !o)}
           columns={columns}
           search={viewConfig.search}
@@ -152,7 +151,7 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
                 tableId={activeTableId!}
                 columns={viewConfig.visibleColumns}
                 rowCount={Number(tableData?.rowCount ?? 0)}
-                search={viewConfig.search || undefined}
+                search={viewConfig.debouncedSearch || undefined}
                 searchMatchIndex={searchMatchIndex}
                 onSearchMatchCountChange={setSearchMatchCount}
                 filters={viewConfig.filters}

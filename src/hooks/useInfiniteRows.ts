@@ -1,8 +1,7 @@
 import { useMemo, useCallback, useEffect, useRef } from "react";
 import { api } from "~/trpc/react";
 import type { TableQueryInput, RowData } from "~/types/Props";
-
-const PAGE_LIMITS = [10000, 90000, 100000];
+import { PAGE_LIMITS } from "~/lib/constants";
 
 export function useInfiniteRows(queryInput: TableQueryInput) {
   const tableContainerRef = useRef<HTMLDivElement>(null);

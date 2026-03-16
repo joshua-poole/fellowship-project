@@ -178,11 +178,14 @@ export function FilterPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="flex items-center px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
+        <button
+          className="flex items-center px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors"
+          style={filters.length > 0 ? { backgroundColor: "#cff5d1" } : undefined}
+        >
           <ListFilter className="h-4 w-4" />
           <span className="hidden lg:inline ml-1">Filter</span>
           {filters.length > 0 && (
-            <span className="bg-blue-100 text-blue-700 rounded-full px-1.5 text-[10px] font-medium">
+            <span className="bg-green-200/60 text-green-800 rounded-full px-1.5 text-[10px] font-medium ml-1">
               {filters.length}
             </span>
           )}
@@ -307,11 +310,14 @@ export function SortPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
+        <button
+          className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors"
+          style={sorts.length > 0 ? { backgroundColor: "#ffe0cc" } : undefined}
+        >
           <ArrowDownUp className="h-4 w-4" />
           <span className="hidden lg:inline ml-1">Sort</span>
           {sorts.length > 0 && (
-            <span className="bg-blue-100 text-blue-700 rounded-full px-1.5 text-[10px] font-medium">
+            <span className="bg-orange-200/60 text-orange-800 rounded-full px-1.5 text-[10px] font-medium ml-1">
               {sorts.length}
             </span>
           )}
@@ -415,11 +421,14 @@ export function HideFieldsPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
+        <button
+          className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors"
+          style={hiddenColumns.length > 0 ? { backgroundColor: "#c4ecff" } : undefined}
+        >
           <EyeOff className="h-4 w-4" />
           <span className="hidden lg:inline ml-1">Hide fields</span>
           {hiddenColumns.length > 0 && (
-            <span className="bg-blue-100 text-blue-700 rounded-full px-1.5 text-[10px] font-medium">
+            <span className="bg-blue-200/60 text-blue-800 rounded-full px-1.5 text-[10px] font-medium ml-1">
               {hiddenColumns.length}
             </span>
           )}

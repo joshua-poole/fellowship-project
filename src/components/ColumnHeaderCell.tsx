@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ChevronDown,
   Pencil,
@@ -65,23 +66,41 @@ export function ColumnHeaderCell({
   onAddFilter,
   onHideColumn,
 }: ColumnHeaderCellProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const handleHeaderClick = (e: React.MouseEvent) => {
+    // Don't focus cell if clicking the chevron button
+    if ((e.target as HTMLElement).closest("[data-chevron-trigger]")) return;
+    // Focus the first cell in this column
+    const table = (e.currentTarget as HTMLElement).closest("table");
+    const firstInput = table?.querySelector<HTMLInputElement>(`input[data-col-id="${col.id}"]`);
+    if (firstInput) firstInput.focus();
+  };
+
   return (
     <Popover open={editingColumnId === col.id} onOpenChange={(open) => { if (!open) setEditingColumnId(null); }}>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <PopoverAnchor asChild>
-            <div className="group/header flex items-center w-full h-full overflow-hidden px-2 cursor-pointer">
-              {col.type === "NUMBER"
-                ? <Hash className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
-                : <ALargeSmall className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
-              }
-              <span className="truncate font-medium text-xs text-gray-700 flex-1">{col.name}</span>
-              <button className="invisible group-hover/header:visible flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10">
+      <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+        <PopoverAnchor asChild>
+          <div
+            className="group/header flex items-center w-full h-full overflow-hidden px-2 cursor-pointer"
+            onClick={handleHeaderClick}
+          >
+            {col.type === "NUMBER"
+              ? <Hash className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
+              : <ALargeSmall className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
+            }
+            <span className="truncate font-medium text-xs text-gray-700 flex-1">{col.name}</span>
+            <DropdownMenuTrigger asChild>
+              <button
+                data-chevron-trigger
+                className="invisible group-hover/header:visible flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <ChevronDown className="h-3 w-3 text-gray-500" />
               </button>
-            </div>
-          </PopoverAnchor>
-        </DropdownMenuTrigger>
+            </DropdownMenuTrigger>
+          </div>
+        </PopoverAnchor>
         <DropdownMenuContent align="start" side="bottom" className="w-60">
           <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => requestAnimationFrame(() => setEditingColumnId(col.id))}>
             <Pencil className="h-4 w-4" /> Edit field

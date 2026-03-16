@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { FilterConfig, SortConfig } from "~/components/ViewToolbar";
 import type { ColDef, ViewData, ViewUpdatePayload } from "~/types/Props";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function useViewConfig(
   activeView: ViewData | undefined,
@@ -8,14 +10,17 @@ export function useViewConfig(
   columns: ColDef[],
 ) {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState<FilterConfig[]>([]);
   const [sorts, setSorts] = useState<SortConfig[]>([]);
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load state from active view when it changes
   useEffect(() => {
     if (activeView) {
       setSearch(activeView.search ?? "");
+      setDebouncedSearch(activeView.search ?? "");
       setFilters(activeView.filters?.map((f) => ({
         columnId: f.columnId,
         operator: f.operator,
@@ -58,7 +63,18 @@ export function useViewConfig(
     });
   }, [activeView, saveToView]);
 
-  const handleSearchChange = useCallback((v: string) => { setSearch(v); saveViewConfig({ search: v }); }, [saveViewConfig]);
+  const handleSearchChange = useCallback((v: string) => {
+    setSearch(v);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(v);
+      saveViewConfig({ search: v });
+    }, SEARCH_DEBOUNCE_MS);
+  }, [saveViewConfig]);
+
+  // Cleanup timer on unmount
+  useEffect(() => () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); }, []);
+
   const handleFiltersChange = useCallback((v: FilterConfig[]) => { setFilters(v); saveViewConfig({ filters: v }); }, [saveViewConfig]);
   const handleSortsChange = useCallback((v: SortConfig[]) => { setSorts(v); saveViewConfig({ sorts: v }); }, [saveViewConfig]);
   const handleHiddenColumnsChange = useCallback((v: string[]) => { setHiddenColumns(v); saveViewConfig({ hiddenColumns: v }); }, [saveViewConfig]);
@@ -70,6 +86,7 @@ export function useViewConfig(
 
   return {
     search,
+    debouncedSearch,
     filters,
     sorts,
     hiddenColumns,
