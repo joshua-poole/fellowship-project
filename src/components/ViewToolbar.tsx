@@ -16,9 +16,17 @@ import {
   Plus,
   ChevronUp,
   ChevronDown,
+  GripVertical,
+  ALargeSmall,
+  Hash,
 } from "lucide-react";
 import type React from "react";
 import type { ColDef } from "~/types/Props";
+
+function ColumnTypeIcon({ type, className }: { type: string; className?: string }) {
+  if (type === "NUMBER") return <Hash className={className} />;
+  return <ALargeSmall className={className} />;
+}
 
 export type FilterConfig = {
   columnId: string;
@@ -179,16 +187,17 @@ export function FilterPopover({
     <Popover>
       <PopoverTrigger asChild>
         <button
-          className="flex items-center px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors"
-          style={filters.length > 0 ? { backgroundColor: "#cff5d1" } : undefined}
+          className="flex items-center px-2 py-1 text-sm hover:bg-gray-100 rounded-sm transition-colors"
+          style={filters.length > 0
+            ? { backgroundColor: "#cff5d1", color: "#000" }
+            : { color: "#6b7280" }}
         >
           <ListFilter className="h-4 w-4" />
-          <span className="hidden lg:inline ml-1">Filter</span>
-          {filters.length > 0 && (
-            <span className="bg-green-200/60 text-green-800 rounded-full px-1.5 text-[10px] font-medium ml-1">
-              {filters.length}
-            </span>
-          )}
+          <span className="ml-1">
+            {filters.length > 0
+              ? `Filtered by ${[...new Set(filters.map((f) => columns.find((c) => c.id === f.columnId)?.name ?? "field"))].join(", ")}`
+              : "Filter"}
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto min-w-105 max-w-150 p-3">
@@ -311,16 +320,17 @@ export function SortPopover({
     <Popover>
       <PopoverTrigger asChild>
         <button
-          className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors"
-          style={sorts.length > 0 ? { backgroundColor: "#ffe0cc" } : undefined}
+          className="flex items-center px-2 py-1 mr-2 text-sm hover:bg-gray-100 rounded-sm transition-colors"
+          style={sorts.length > 0
+            ? { backgroundColor: "#ffe0cc", color: "#000" }
+            : { color: "#6b7280" }}
         >
           <ArrowDownUp className="h-4 w-4" />
-          <span className="hidden lg:inline ml-1">Sort</span>
-          {sorts.length > 0 && (
-            <span className="bg-orange-200/60 text-orange-800 rounded-full px-1.5 text-[10px] font-medium ml-1">
-              {sorts.length}
-            </span>
-          )}
+          <span className="ml-1">
+            {sorts.length > 0
+              ? `Sorted by ${sorts.length} field${sorts.length > 1 ? "s" : ""}`
+              : "Sort"}
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto min-w-90 p-3">
@@ -406,7 +416,11 @@ export function HideFieldsPopover({
   hiddenColumns: string[];
   onHiddenColumnsChange: (h: string[]) => void;
 }) {
+  const [fieldSearch, setFieldSearch] = useState("");
   const hiddenSet = new Set(hiddenColumns);
+  const filteredColumns = columns.filter((c) =>
+    c.name.toLowerCase().includes(fieldSearch.toLowerCase()),
+  );
 
   const toggle = (colId: string) => {
     const next = new Set(hiddenSet);
@@ -422,51 +436,67 @@ export function HideFieldsPopover({
     <Popover>
       <PopoverTrigger asChild>
         <button
-          className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors"
-          style={hiddenColumns.length > 0 ? { backgroundColor: "#c4ecff" } : undefined}
+          className="flex items-center px-2 py-1 mr-2 text-sm hover:bg-gray-100 rounded-sm transition-colors"
+          style={hiddenColumns.length > 0
+            ? { backgroundColor: "#c4ecff", color: '#000' }
+            : { color: "#6b7280" }}
         >
           <EyeOff className="h-4 w-4" />
-          <span className="hidden lg:inline ml-1">Hide fields</span>
-          {hiddenColumns.length > 0 && (
-            <span className="bg-blue-200/60 text-blue-800 rounded-full px-1.5 text-[10px] font-medium ml-1">
-              {hiddenColumns.length}
-            </span>
-          )}
+          <span className="ml-1">
+            {hiddenColumns.length > 0
+              ? `${hiddenColumns.length} hidden field${hiddenColumns.length > 1 ? "s" : ""}`
+              : "Hide fields"}
+          </span>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-65 p-3">
-        <div className="space-y-1">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Fields</span>
-            <div className="flex gap-2">
-              <button
-                onClick={showAll}
-                className="text-[10px] text-blue-600 hover:text-blue-700"
-              >
-                Show all
-              </button>
-              <button
-                onClick={hideAll}
-                className="text-[10px] text-blue-600 hover:text-blue-700"
-              >
-                Hide all
-              </button>
-            </div>
-          </div>
+      <PopoverContent align="start" className="w-72 p-0">
+        {/* Search */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200">
+          <input
+            type="text"
+            value={fieldSearch}
+            onChange={(e) => setFieldSearch(e.target.value)}
+            placeholder="Find a field"
+            className="flex-1 text-sm outline-none bg-transparent placeholder:text-gray-400"
+          />
+        </div>
 
-          {columns.map((col) => (
-            <div
-              key={col.id}
-              className="flex items-center justify-between py-1 px-1 rounded hover:bg-gray-50"
-            >
-              <span className="text-sm truncate mr-2">{col.name}</span>
-              <Switch
-                size="sm"
-                checked={!hiddenSet.has(col.id)}
-                onCheckedChange={() => toggle(col.id)}
-              />
-            </div>
-          ))}
+        {/* Field list */}
+        <div className="max-h-64 overflow-y-auto py-1">
+          {filteredColumns.map((col) => {
+            const isVisible = !hiddenSet.has(col.id);
+            return (
+              <div
+                key={col.id}
+                className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50"
+              >
+                <Switch
+                  size="sm"
+                  checked={isVisible}
+                  onCheckedChange={() => toggle(col.id)}
+                />
+                <ColumnTypeIcon type={col.type} className="h-4 w-4 text-gray-400 shrink-0" />
+                <span className="text-sm truncate flex-1">{col.name}</span>
+                <GripVertical className="h-4 w-4 text-gray-300 shrink-0" />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Bottom actions */}
+        <div className="flex border-t border-gray-200">
+          <button
+            onClick={hideAll}
+            className="flex-1 py-2 text-sm text-gray-600 hover:bg-gray-50 border-r border-gray-200"
+          >
+            Hide all
+          </button>
+          <button
+            onClick={showAll}
+            className="flex-1 py-2 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            Show all
+          </button>
         </div>
       </PopoverContent>
     </Popover>
