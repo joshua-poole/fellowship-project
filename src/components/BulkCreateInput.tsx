@@ -12,7 +12,14 @@ export function BulkCreateInput({ queryInput }: { queryInput: TableQueryInput })
   const [isInserting, setIsInserting] = useState(false);
   const utils = api.useUtils();
 
-  const bulkCreate = api.row.bulkCreate.useMutation();
+  const bulkCreate = api.row.bulkCreate.useMutation({
+    onSuccess: (_data, vars) => {
+      utils.table.getById.setData({ id: vars.tableId }, (old) => {
+        if (!old) return old;
+        return { ...old, rowCount: Number(old.rowCount) + vars.count };
+      });
+    },
+  });
 
   const handleBulkInsert = async () => {
     setIsInserting(true);
