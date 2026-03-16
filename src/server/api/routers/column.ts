@@ -120,7 +120,25 @@ export const columnRouter = createTRPCRouter({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete the primary column" });
       }
 
-      await ctx.db.column.delete({ where: { id: input.id } });
+      await ctx.db.$transaction([
+        // Remove the column
+        ctx.db.column.delete({ where: { id: input.id } }),
+        // Close the gap in column ordering
+        ctx.db.column.updateMany({
+          where: { tableId: column.tableId, order: { gt: column.order } },
+          data: { order: { decrement: 1 } },
+        }),
+        // Strip the deleted column's key from every row's JSONB values
+        ctx.db.$executeRawUnsafe(
+          `UPDATE "Row" SET "values" = "values" - $1 WHERE "tableId" = $2`,
+          input.id,
+          column.tableId,
+        ),
+        // Clean up view references to this column
+        ctx.db.viewFilter.deleteMany({ where: { columnId: input.id, view: { tableId: column.tableId } } }),
+        ctx.db.viewSort.deleteMany({ where: { columnId: input.id, view: { tableId: column.tableId } } }),
+        ctx.db.viewHiddenColumn.deleteMany({ where: { columnId: input.id, view: { tableId: column.tableId } } }),
+      ]);
       return true;
     }),
 });

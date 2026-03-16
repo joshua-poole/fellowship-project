@@ -191,10 +191,30 @@ export const rowRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const table = await ctx.db.table.findFirst({
         where: ownerWhere(input.tableId, ctx.session.user.id),
+        include: { columns: { select: { id: true, type: true } } },
       });
 
       if (!table) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
+      }
+
+      // Validate and coerce values against column definitions
+      const columnMap = new Map(table.columns.map((c) => [c.id, c.type]));
+      const validated: Record<string, string | number> = {};
+      for (const [key, val] of Object.entries(input.values ?? {})) {
+        const colType = columnMap.get(key);
+        if (!colType) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown column: ${key}` });
+        }
+        if (colType === "NUMBER") {
+          const num = Number(val);
+          if (isNaN(num)) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Value for column ${key} must be a number` });
+          }
+          validated[key] = num;
+        } else {
+          validated[key] = String(val);
+        }
       }
 
       const last = await ctx.db.row.findFirst({
@@ -209,7 +229,7 @@ export const rowRouter = createTRPCRouter({
             id: rowId(),
             tableId: input.tableId,
             order: (last?.order ?? -1) + 1,
-            values: input.values ?? {},
+            values: validated,
           },
         }),
         ctx.db.table.update({
