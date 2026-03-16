@@ -281,16 +281,14 @@ export const rowRouter = createTRPCRouter({
         const valuesJson = JSON.stringify(values);
         rowsSql.push(`('${id}', '${input.tableId}', ${order}, $json$${valuesJson}$json$::jsonb, '${now}')`);
       }
-      await ctx.db.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe(`
-          INSERT INTO "Row" ("id", "tableId", "order", "values", "updatedAt")
-          VALUES ${rowsSql.join(", ")};
-        `);
-        await tx.table.update({
-          where: { id: input.tableId },
-          data: { rowCount: { increment: input.count } },
-        });
-      }, { timeout: 30000 });
+      await ctx.db.$executeRawUnsafe(`
+        INSERT INTO "Row" ("id", "tableId", "order", "values", "updatedAt")
+        VALUES ${rowsSql.join(", ")};
+      `);
+      await ctx.db.table.update({
+        where: { id: input.tableId },
+        data: { rowCount: { increment: input.count } },
+      });
       return { count: input.count };
     }),
 
