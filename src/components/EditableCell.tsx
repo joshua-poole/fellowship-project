@@ -49,6 +49,7 @@ export function EditableCell({
   const [focused, setFocused] = useState(false);
   const [editing, setEditing] = useState(false);
   const navigatingRef = useRef(false);
+  const wasFocusedRef = useRef(false);
   const utils = api.useUtils();
 
   // Sync value from pending edits or server data when not focused
@@ -247,7 +248,7 @@ export function EditableCell({
       ) : null}
       <input
         data-col-id={columnId}
-        className={`w-full bg-transparent outline-none truncate ${isFirstCol && focused ? "text-[rgb(22,110,225)]" : ""} ${!focused && search && value ? "text-transparent" : ""}`}
+        className={`relative w-full bg-transparent outline-none truncate ${isFirstCol && focused ? "text-[rgb(22,110,225)]" : ""} ${!focused && search && value ? "text-transparent" : ""}`}
         style={focused && !editing ? { caretColor: "transparent" } : undefined}
         readOnly={!editing}
         inputMode={columnType === "NUMBER" ? "decimal" : "text"}
@@ -259,10 +260,12 @@ export function EditableCell({
           setValue(v);
         }}
         onFocus={() => setFocused(true)}
+        onClick={() => { if (wasFocusedRef.current && !editing) setEditing(true); wasFocusedRef.current = true; }}
         onDoubleClick={() => setEditing(true)}
         onBlur={() => {
           setFocused(false);
           setEditing(false);
+          wasFocusedRef.current = false;
           if (navigatingRef.current) {
             navigatingRef.current = false;
             save();
