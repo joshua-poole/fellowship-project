@@ -45,5 +45,35 @@ export function useRowMutations(tableId: string, queryInput: TableQueryInput) {
     },
   });
 
-  return { createRow };
+  const deleteRow = api.row.delete.useMutation({
+    onMutate: async ({ id }) => {
+      await utils.row.getByTable.cancel({ tableId });
+      const prev = utils.row.getByTable.getInfiniteData(queryInput);
+      utils.row.getByTable.setInfiniteData(queryInput, (old) => {
+        if (!old) return old;
+        return { ...old, pages: old.pages.map((page) => ({
+          ...page,
+          rows: page.rows.filter((r) => r.id !== id),
+        }))};
+      });
+      utils.table.getById.setData({ id: tableId }, (old) => {
+        if (!old) return old;
+        return { ...old, rowCount: Math.max(0, Number(old.rowCount) - 1) };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) utils.row.getByTable.setInfiniteData(queryInput, ctx.prev);
+      utils.table.getById.setData({ id: tableId }, (old) => {
+        if (!old) return old;
+        return { ...old, rowCount: Number(old.rowCount) + 1 };
+      });
+    },
+    onSettled: () => {
+      void utils.row.getByTable.invalidate({ tableId });
+      void utils.table.getById.invalidate({ id: tableId });
+    },
+  });
+
+  return { createRow, deleteRow };
 }

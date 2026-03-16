@@ -89,6 +89,8 @@ export function useColumnMutations(tableId: string) {
     },
     onSettled: () => {
       void utils.table.getById.invalidate({ id: tableId });
+      // Re-fetch rows so deleted column's values are stripped from the cache
+      void utils.row.getByTable.invalidate();
     },
   });
 
