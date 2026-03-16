@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
-import { tableId, columnId, viewId, rowId } from "~/lib/ids";
+import { tableId, viewId } from "~/lib/ids";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createDefaultColumnsAndRows } from "~/server/api/helpers/defaultTable";
 import {
   TableGetByIdInputSchema,
   TableGetByIdOutputSchema,
@@ -80,26 +81,20 @@ export const tableRouter = createTRPCRouter({
 
       const lastOrder = existingTables[0]?.order ?? -1;
 
+      const { columns: defaultColumns, rows: defaultRows, rowCount } = createDefaultColumnsAndRows();
+
       const table = await ctx.db.table.create({
         data: {
           id: tableId(),
           name: input.name ?? `Table ${highestNum + 1}`,
           order: lastOrder + 1,
-          rowCount: 1,
+          rowCount,
           baseId: input.baseId,
-          columns: {
-            create: [
-              { id: columnId(), name: "Name", type: "TEXT", order: 0 },
-              { id: columnId(), name: "Notes", type: "TEXT", order: 1 },
-              { id: columnId(), name: "Status", type: "NUMBER", order: 2 },
-            ],
-          },
+          columns: { create: defaultColumns },
           views: {
             create: [{ id: viewId(), name: "Grid view", type: "grid", order: 0 }],
           },
-          rows: {
-            create: [{ id: rowId(), order: 0, values: {} }],
-          },
+          rows: { create: defaultRows },
         },
       });
 
@@ -143,6 +138,11 @@ export const tableRouter = createTRPCRouter({
 
       if (!table) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
+      }
+
+      const tableCount = await ctx.db.table.count({ where: { baseId: table.baseId } });
+      if (tableCount <= 1) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete the last table in a base" });
       }
 
       await ctx.db.table.delete({ where: { id: input.id } });

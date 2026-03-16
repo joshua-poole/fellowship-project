@@ -38,6 +38,8 @@ export function EditableCell({
   isLastCol,
   search,
   isActiveSearchMatch,
+  isFiltered,
+  isSorted,
 }: EditableCellProps) {
   const cellKey = `${rowId}:${columnId}`;
 
@@ -170,6 +172,8 @@ export function EditableCell({
     // Enter editing mode on any printable key when selected but not editing
     if (!editing && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
       setEditing(true);
+      setValue(e.key);
+      e.preventDefault();
       return;
     }
 
@@ -205,8 +209,13 @@ export function EditableCell({
 
   const isSearchMatch = !focused && !!search && !!value && value.toLowerCase().includes(search.toLowerCase());
 
+  const cellBg = isFiltered ? "#ebfbec" : isSorted ? "#fff2ea" : undefined;
+
   return (
     <>
+      {cellBg && !focused && (
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: cellBg }} />
+      )}
       {focused && (
         <div
           className="absolute pointer-events-none"
@@ -238,10 +247,13 @@ export function EditableCell({
       ) : null}
       <input
         data-col-id={columnId}
-        className={`w-full bg-transparent outline-none truncate ${focused ? "text-[rgb(22,110,225)]" : ""} ${!focused && search && value ? "text-transparent" : ""}`}
+        className={`w-full bg-transparent outline-none truncate ${isFirstCol && focused ? "text-[rgb(22,110,225)]" : ""} ${!focused && search && value ? "text-transparent" : ""}`}
+        style={focused && !editing ? { caretColor: "transparent" } : undefined}
+        readOnly={!editing}
         inputMode={columnType === "NUMBER" ? "decimal" : "text"}
         value={value}
         onChange={(e) => {
+          if (!editing) return;
           const v = e.target.value;
           if (columnType === "NUMBER" && v !== "" && !/^-?\d*\.?\d*$/.test(v)) return;
           setValue(v);

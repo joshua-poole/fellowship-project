@@ -36,6 +36,8 @@ export interface EditableCellProps {
   isLastCol?: boolean;
   search?: string;
   isActiveSearchMatch?: boolean;
+  isFiltered?: boolean;
+  isSorted?: boolean;
 }
 
 export interface TableTabsBarProps {

@@ -14,7 +14,8 @@ import { EditableCell } from "~/components/EditableCell";
 import { ColumnHeaderCell } from "~/components/ColumnHeaderCell";
 import { ColumnFieldForm } from "~/components/ColumnFieldForm";
 import { BulkCreateInput } from "~/components/BulkCreateInput";
-import { Plus, Check } from "lucide-react";
+import { Plus } from "lucide-react";
+import { RowCheckbox } from "~/components/RowCheckbox";
 import {
   Popover,
   PopoverTrigger,
@@ -25,16 +26,13 @@ import { useSearchMatches } from "~/hooks/useSearchMatches";
 import { useRowMutations } from "~/hooks/useRowMutations";
 import { useColumnMutations } from "~/hooks/useColumnMutations";
 import type { RowData, TableQueryInput, TableVirtualizerContextValue, VirtualizedTableProps } from "~/types/Props";
+import { ROW_HEIGHT, PAGE_LIMITS } from "~/lib/constants";
 
 const TableVirtualizerContext = createContext<TableVirtualizerContextValue | null>(null);
 
 export function useTableVirtualizer() {
   return useContext(TableVirtualizerContext);
 }
-
-const ROW_HEIGHT = 32;
-// TODO: Find optimal pagination limits for smooth experience
-const PAGE_LIMITS = [10000, 90000, 100000];
 
 export function VirtualizedTable({ tableId, columns, rowCount, search, searchMatchIndex, onSearchMatchCountChange, filters, sorts, onAddSort, onAddFilter, onHideColumn }: VirtualizedTableProps) {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -43,31 +41,18 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
 
   // Build query input with view config
   const queryInput = useMemo<TableQueryInput>(() => {
-    const input: {
-      tableId: string;
-      limit: number;
-      search?: string;
-      filters?: { columnId: string; operator: "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt"; value?: string | number }[];
-      sorts?: { columnId: string; direction: "asc" | "desc" }[];
-    } = { tableId, limit: PAGE_LIMITS[0]! };
-
+    const input: TableQueryInput = { tableId, limit: PAGE_LIMITS[0] };
     if (search) input.search = search;
-
-    if (filters && filters.length > 0) {
+    if (filters?.length) {
       input.filters = filters.map((f) => ({
         columnId: f.columnId,
-        operator: f.operator as "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt",
+        operator: f.operator as NonNullable<TableQueryInput["filters"]>[number]["operator"],
         ...(f.value != null && f.value !== "" ? { value: f.value } : {}),
       }));
     }
-
-    if (sorts && sorts.length > 0) {
-      input.sorts = sorts.map((s) => ({
-        columnId: s.columnId,
-        direction: s.direction,
-      }));
+    if (sorts?.length) {
+      input.sorts = sorts.map((s) => ({ columnId: s.columnId, direction: s.direction }));
     }
-
     return input;
   }, [tableId, search, filters, sorts]);
 
@@ -76,6 +61,10 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
   const { searchMatches, scrollToRowRef } = useSearchMatches(search, rows, columns, searchMatchIndex, onSearchMatchCountChange);
   const { createRow } = useRowMutations(tableId, queryInput);
   const columnMutations = useColumnMutations(tableId);
+
+  // Compute sets of columns with active filters/sorts for cell coloring
+  const filteredColumnIds = useMemo(() => new Set(filters?.map((f) => f.columnId) ?? []), [filters]);
+  const sortedColumnIds = useMemo(() => new Set(sorts?.map((s) => s.columnId) ?? []), [sorts]);
 
   // Column definitions
   const columnHelper = createColumnHelper<RowData>();
@@ -88,22 +77,10 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
           const allSelected = rows.length > 0 && selectedRows.size === rows.length;
           return (
             <div className="w-11 h-8 flex items-center justify-center pl-3">
-              <div
-                className="cursor-pointer flex items-center justify-center"
-                onClick={() =>
-                  setSelectedRows(allSelected ? new Set() : new Set(rows.map((r) => r.id)))
-                }
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 3,
-                  backgroundColor: allSelected ? "rgb(22, 110, 225)" : "white",
-                  border: `1.5px solid ${allSelected ? "rgb(22, 110, 225)" : "#d1d5db"}`,
-                  boxSizing: "content-box",
-                }}
-              >
-                {allSelected && <Check style={{ width: 9, height: 9, color: "white", strokeWidth: 3 }} />}
-              </div>
+              <RowCheckbox
+                checked={allSelected}
+                onClick={() => setSelectedRows(allSelected ? new Set() : new Set(rows.map((r) => r.id)))}
+              />
             </div>
           );
         },
@@ -112,11 +89,8 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
           const toggle = () =>
             setSelectedRows((prev) => {
               const next = new Set(prev);
-              if (isSelected) {
-                next.delete(row.original.id);
-              } else {
-                next.add(row.original.id);
-              }
+              if (isSelected) next.delete(row.original.id);
+              else next.add(row.original.id);
               return next;
             });
           return (
@@ -124,19 +98,8 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               <span className={`select-none text-xs text-gray-500 tabular-nums ${isSelected ? "hidden" : "group-hover/row:hidden"}`}>
                 {row.index + 1}
               </span>
-              <div
-                className={`cursor-pointer rounded-[3px] flex items-center justify-center ${isSelected ? "flex" : "hidden group-hover/row:flex"}`}
-                onClick={toggle}
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 3,
-                  backgroundColor: isSelected ? "rgb(22, 110, 225)" : "white",
-                  border: `1.5px solid ${isSelected ? "rgb(22, 110, 225)" : "#d1d5db"}`,
-                  boxSizing: "content-box",
-                }}
-              >
-                {isSelected && <Check style={{ width: 9, height: 9, color: "white", strokeWidth: 3 }} />}
+              <div className={`${isSelected ? "flex" : "hidden group-hover/row:flex"}`}>
+                <RowCheckbox checked={isSelected} onClick={toggle} />
               </div>
             </div>
           );
@@ -149,6 +112,8 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
       const col = columns[i]!;
       const isFirstCol = i === 0;
       const isLastCol = i === columns.length - 1;
+      const colIsFiltered = filteredColumnIds.has(col.id);
+      const colIsSorted = sortedColumnIds.has(col.id);
       cols.push(
         columnHelper.accessor((row) => row.values[col.id] ?? "", {
           id: col.id,
@@ -185,6 +150,8 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                 isFirstRow={info.row.index === 0}
                 search={search}
                 isActiveSearchMatch={isActive}
+                isFiltered={colIsFiltered}
+                isSorted={colIsSorted}
               />
             );
           },
@@ -222,7 +189,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
     );
 
     return cols;
-  }, [columns, columnHelper, tableId, selectedRows, columnMutations, rows, onAddFilter, onAddSort, onHideColumn, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex]);
+  }, [columns, columnHelper, tableId, selectedRows, columnMutations, rows, onAddFilter, onAddSort, onHideColumn, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds]);
 
   const table = useReactTable({
     data: rows,
@@ -283,15 +250,19 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
           >
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="border-r border-b border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50 bg-white"
-                    style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT }}
-                  >
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const colId = header.column.id;
+                  const headerBg = filteredColumnIds.has(colId) || sortedColumnIds.has(colId) ? "#fff2ea" : undefined;
+                  return (
+                    <th
+                      key={header.id}
+                      className="border-r border-b border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50 bg-white"
+                      style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT, ...(headerBg && { backgroundColor: headerBg }) }}
+                    >
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
+                  );
+                })}
               </tr>
             ))}
           </thead>
@@ -312,7 +283,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                   data-index={virtualRow.index}
                   ref={(node) => rowVirtualizer.measureElement(node)}
                   key={row.id}
-                  className={`group/row ${isSelected ? "bg-blue-50" : "hover:bg-gray-50/80"} bg-[#f6f8fc] focus-within:z-10`}
+                  className={`group/row ${isSelected ? "bg-[#fbfcfe]" : "hover:bg-gray-50/80"} bg-[#f6f8fc] focus-within:z-10`}
                   style={{
                     display: "flex",
                     position: "absolute",
@@ -324,8 +295,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                   {row.getVisibleCells().filter((cell) => cell.column.id !== "_addCol").map((cell, colIndex) => (
                     <td
                       key={cell.id}
-                      // TODO: Change the first row of cells to now have a border-r
-                      className={`border-b ${cell.id ? 'border-r' : ''} border-(--colors-border-default) focus-within:border-transparent shrink-0 ${colIndex === 0 ? "p-0 overflow-hidden" : "flex items-center px-1.5"} bg-white relative`}
+                      className={`border-b ${cell.id ? 'border-r' : ''} border-(--colors-border-default) focus-within:border-transparent shrink-0 ${colIndex === 0 ? "p-0 overflow-hidden" : "flex items-center px-1.5"} ${isSelected ? "bg-[#fbfcfe] focus-within:bg-white" : "bg-white"} relative`}
                       style={{ display: "flex", width: cell.column.getSize(), height: ROW_HEIGHT }}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -337,7 +307,6 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
           </tbody>
         </table>
 
-        {/* TODO: THERE should only be a border on the right of the first cell that is not a number */}
         {/* Ghost / add row */}
         <div
           className="flex items-center border-b border-r border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors bg-white"
@@ -346,7 +315,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
         >
           <div className="shrink-0 border-r border-(--colors-border-default) h-full w-21">
             <div className="w-8 h-8 flex items-center justify-center ml-3">
-              <Plus className="h-4 w-4 text-gray-400" />
+              <Plus className="h-4 w-4 text-black" strokeWidth={1.5} />
             </div>
           </div>
         </div>

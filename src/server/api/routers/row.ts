@@ -15,8 +15,6 @@ import {
 } from "~/types/schemas/row";
 import type { RowFilter } from "~/types/Props";
 
-
-
 function buildRawFilterCondition(
   filter: RowFilter,
   params: (string | number)[],
@@ -65,7 +63,6 @@ const ownerWhere = (tableId: string, userId: string) => ({
 });
 
 export const rowRouter = createTRPCRouter({
-  // TODO: improve performance
   getByTable: protectedProcedure
     .input(RowGetByTableInputSchema)
     .query(async ({ ctx, input }) => {
@@ -246,7 +243,7 @@ export const rowRouter = createTRPCRouter({
       const startOrder = (last?.order ?? -1) + 1;
       const now = new Date().toISOString();
 
-      const rowsSql = [];
+      const rowsSql: string[] = [];
       for (let i = 0; i < input.count; i++) {
         const id = rowIdFast();
         const order = startOrder + i;
@@ -260,11 +257,10 @@ export const rowRouter = createTRPCRouter({
             values[col.id] = faker.lorem.words({ min: 1, max: 3 });
           }
         }
-        const valuesJson = JSON.stringify(values).replace(/'/g, "''");
-        rowsSql.push(`('${id}', '${input.tableId}', ${order}, '${valuesJson}'::jsonb, '${now}')`);
+        // Use dollar-quoting to safely embed JSON without escaping issues
+        const valuesJson = JSON.stringify(values);
+        rowsSql.push(`('${id}', '${input.tableId}', ${order}, $json$${valuesJson}$json$::jsonb, '${now}')`);
       }
-      // TODO: use Promise.all to batch the inserts?
-      // await Promise.all([]);
       await ctx.db.$transaction([
         ctx.db.$executeRawUnsafe(`
           INSERT INTO "Row" ("id", "tableId", "order", "values", "updatedAt")

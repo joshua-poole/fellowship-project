@@ -12,7 +12,8 @@ import {
   BaseDeleteOutputSchema,
 } from "~/types/schemas/base";
 import { z } from "zod";
-import { baseId, tableId, columnId, viewId } from "~/lib/ids";
+import { baseId, tableId, viewId } from "~/lib/ids";
+import { createDefaultColumnsAndRows } from "~/server/api/helpers/defaultTable";
 
 export const baseRouter = createTRPCRouter({
   getAll: protectedProcedure
@@ -59,6 +60,8 @@ export const baseRouter = createTRPCRouter({
     .input(BaseCreateInputSchema)
     .output(BaseCreateOutputSchema)
     .mutation(async ({ ctx, input }) => {
+      const { columns: defaultColumns, rows: defaultRows, rowCount } = createDefaultColumnsAndRows();
+
       const base = await ctx.db.base.create({
         data: {
           id: baseId(),
@@ -69,16 +72,12 @@ export const baseRouter = createTRPCRouter({
               id: tableId(),
               name: "Table 1",
               order: 0,
-              columns: {
-                create: [
-                  { id: columnId(), name: "Name", type: "TEXT", order: 0 },
-                  { id: columnId(), name: "Notes", type: "TEXT", order: 1 },
-                  { id: columnId(), name: "Status", type: "NUMBER", order: 2 },
-                ],
-              },
+              rowCount,
+              columns: { create: defaultColumns },
               views: {
                 create: { id: viewId(), name: "Grid view", type: "grid", order: 0 },
               },
+              rows: { create: defaultRows },
             },
           },
         },

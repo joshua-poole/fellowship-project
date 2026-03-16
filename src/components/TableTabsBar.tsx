@@ -85,7 +85,7 @@ export function TableTabsBar({
                     <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Lock className="h-4 w-4 mr-2" />Edit table permissions</DropdownMenuItem>
                     <DropdownMenuSeparator className="m-2 opacity-50" />
                     <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><X className="h-4 w-4 mr-2" />Clear data</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0" onClick={() => onDeleteTable(t.id, t.name)}><Trash2 className="h-4 w-4 mr-2" />Delete table</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0" disabled={tables.length <= 1} onClick={() => onDeleteTable(t.id, t.name)}><Trash2 className="h-4 w-4 mr-2" />Delete table</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (

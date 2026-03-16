@@ -242,6 +242,7 @@
   --colors-background-switch-handle: var(--palette-neutral-white);
   --colors-background-modal-backdrop: var(--palette-opacity-darken3);
   --colors-background-selected: var(--palette-opacity-darken1);
+  --colors-background-selected-hover: rgba(0, 0, 0, 0.04);
   --colors-background-selected-blue: rgba(22, 110, 225, 0.05);
   --colors-background-selected-blue-hover: rgba(22, 110, 225, 0.1);
   --colors-background-translucent: var(--palette-opacity-lighten2);

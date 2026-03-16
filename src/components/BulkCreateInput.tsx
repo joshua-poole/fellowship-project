@@ -4,7 +4,6 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import type { TableQueryInput } from "~/types/Props";
 
-// TODO: Find optimal batch size
 const BATCH_SIZE = 10000;
 
 export function BulkCreateInput({ queryInput }: { queryInput: TableQueryInput }) {

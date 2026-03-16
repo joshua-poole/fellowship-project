@@ -14,7 +14,6 @@ import type { FilterConfig, SortConfig } from "./ViewToolbar";
 
 interface ViewsToolbarProps {
   activeViewName: string;
-  viewsSidebarOpen: boolean;
   onToggleViewsSidebar: () => void;
   columns: ColDef[];
   search: string;
@@ -33,7 +32,6 @@ interface ViewsToolbarProps {
 
 export function ViewsToolbar({
   activeViewName,
-  viewsSidebarOpen,
   onToggleViewsSidebar,
   columns,
   search,
