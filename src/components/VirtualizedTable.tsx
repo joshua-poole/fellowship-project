@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, createContext, useContext } from "react";
+import React, { useState, useMemo, useCallback, useRef, createContext, useContext } from "react";
 import {
   type ColumnDef,
   flexRender,
@@ -38,6 +38,12 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [addColumnOpen, setAddColumnOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowId: string } | null>(null);
+
+  const handleRowContextMenu = useCallback((e: React.MouseEvent, rowId: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, rowId });
+  }, []);
 
   // Build query input with view config
   const queryInput = useMemo<TableQueryInput>(() => {
@@ -59,7 +65,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
   // Extracted hooks
   const { rows, isLoading, isFetchingNextPage, tableContainerRef, fetchMoreOnBottomReached } = useInfiniteRows(queryInput);
   const { searchMatches, scrollToRowRef } = useSearchMatches(search, rows, columns, searchMatchIndex, onSearchMatchCountChange);
-  const { createRow } = useRowMutations(tableId, queryInput);
+  const { createRow, deleteRow } = useRowMutations(tableId, queryInput);
   const columnMutations = useColumnMutations(tableId);
 
   // Compute sets of columns with active filters/sorts for cell coloring
@@ -69,23 +75,29 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
   // Column definitions
   const columnHelper = createColumnHelper<RowData>();
 
+  // Ref for volatile render-time values — avoids rebuilding column defs on every state change
+  const renderRef = useRef({ selectedRows, rows, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn });
+  renderRef.current = { selectedRows, rows, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn };
+
   const tableColumns = useMemo<ColumnDef<RowData, unknown>[]>(() => {
+    const r = renderRef;
     const cols: ColumnDef<RowData, unknown>[] = [
       columnHelper.display({
         id: "_rowNum",
         header: () => {
-          const allSelected = rows.length > 0 && selectedRows.size === rows.length;
+          const { rows: currentRows, selectedRows: sel } = r.current;
+          const allSelected = currentRows.length > 0 && sel.size === currentRows.length;
           return (
             <div className="w-11 h-8 flex items-center justify-center pl-3">
               <RowCheckbox
                 checked={allSelected}
-                onClick={() => setSelectedRows(allSelected ? new Set() : new Set(rows.map((r) => r.id)))}
+                onClick={() => setSelectedRows(allSelected ? new Set() : new Set(currentRows.map((row) => row.id)))}
               />
             </div>
           );
         },
         cell: ({ row }) => {
-          const isSelected = selectedRows.has(row.original.id);
+          const isSelected = r.current.selectedRows.has(row.original.id);
           const toggle = () =>
             setSelectedRows((prev) => {
               const next = new Set(prev);
@@ -112,8 +124,6 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
       const col = columns[i]!;
       const isFirstCol = i === 0;
       const isLastCol = i === columns.length - 1;
-      const colIsFiltered = filteredColumnIds.has(col.id);
-      const colIsSorted = sortedColumnIds.has(col.id);
       cols.push(
         columnHelper.accessor((row) => row.values[col.id] ?? "", {
           id: col.id,
@@ -123,19 +133,20 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               columns={columns}
               tableId={tableId}
               isFirstCol={isFirstCol}
-              editingColumnId={editingColumnId}
+              editingColumnId={r.current.editingColumnId}
               setEditingColumnId={setEditingColumnId}
-              onCreateColumn={(input) => columnMutations.create.mutate(input)}
-              onUpdateColumn={(input) => columnMutations.update.mutate(input)}
-              onDeleteColumn={(input) => columnMutations.remove.mutate(input)}
-              onAddSort={onAddSort}
-              onAddFilter={onAddFilter}
-              onHideColumn={onHideColumn}
+              onCreateColumn={(input) => r.current.columnMutations.create.mutate(input)}
+              onUpdateColumn={(input) => r.current.columnMutations.update.mutate(input)}
+              onDeleteColumn={(input) => r.current.columnMutations.remove.mutate(input)}
+              onAddSort={r.current.onAddSort}
+              onAddFilter={r.current.onAddFilter}
+              onHideColumn={r.current.onHideColumn}
             />
           ),
           cell: (info) => {
-            const activeMatch = searchMatches.length > 0 && searchMatchIndex != null
-              ? searchMatches[searchMatchIndex % searchMatches.length]
+            const { searchMatches: matches, searchMatchIndex: matchIdx, search: s, filteredColumnIds: fIds, sortedColumnIds: sIds } = r.current;
+            const activeMatch = matches.length > 0 && matchIdx != null
+              ? matches[matchIdx % matches.length]
               : null;
             const isActive = activeMatch?.rowIndex === info.row.index && activeMatch?.columnId === col.id;
             return (
@@ -148,10 +159,10 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                 isFirstCol={isFirstCol}
                 isLastCol={isLastCol}
                 isFirstRow={info.row.index === 0}
-                search={search}
+                search={s}
                 isActiveSearchMatch={isActive}
-                isFiltered={colIsFiltered}
-                isSorted={colIsSorted}
+                isFiltered={fIds.has(col.id)}
+                isSorted={sIds.has(col.id)}
               />
             );
           },
@@ -165,7 +176,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
       columnHelper.display({
         id: "_addCol",
         header: () => (
-          <Popover open={addColumnOpen} onOpenChange={setAddColumnOpen}>
+          <Popover open={r.current.addColumnOpen} onOpenChange={setAddColumnOpen}>
             <PopoverTrigger asChild>
               <div className="flex items-center justify-center w-23.5 h-8 cursor-pointer hover:bg-gray-100">
                 <Plus className="h-4 w-4" />
@@ -175,7 +186,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               <ColumnFieldForm
                 defaultName={`Field ${columns.length + 1}`}
                 onSave={(name, type) => {
-                  columnMutations.create.mutate({ tableId, name, type });
+                  r.current.columnMutations.create.mutate({ tableId, name, type });
                   setAddColumnOpen(false);
                 }}
                 onCancel={() => setAddColumnOpen(false)}
@@ -189,7 +200,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
     );
 
     return cols;
-  }, [columns, columnHelper, tableId, selectedRows, columnMutations, rows, onAddFilter, onAddSort, onHideColumn, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds]);
+  }, [columns, columnHelper, tableId]);
 
   const table = useReactTable({
     data: rows,
@@ -291,6 +302,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                     width: "100%",
                     height: ROW_HEIGHT,
                   }}
+                  onContextMenu={(e) => handleRowContextMenu(e, row.original.id)}
                 >
                   {row.getVisibleCells().filter((cell) => cell.column.id !== "_addCol").map((cell, colIndex) => (
                     <td
@@ -337,6 +349,28 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
       </div>
 
     </div>
+
+    {/* Row right-click context menu */}
+    {contextMenu && (
+      <>
+        <div className="fixed inset-0 z-50" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null); }} />
+        <div
+          className="fixed z-50 bg-white border border-(--colors-border-default) rounded-md shadow-md py-1 min-w-40"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            className="w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-gray-50 cursor-pointer"
+            onClick={() => {
+              deleteRow.mutate({ id: contextMenu.rowId });
+              setSelectedRows((prev) => { const next = new Set(prev); next.delete(contextMenu.rowId); return next; });
+              setContextMenu(null);
+            }}
+          >
+            Delete row
+          </button>
+        </div>
+      </>
+    )}
     </TableVirtualizerContext.Provider>
   );
 }
