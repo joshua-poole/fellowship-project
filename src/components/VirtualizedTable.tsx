@@ -263,7 +263,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
                 {headerGroup.headers.map((header) => {
                   const colId = header.column.id;
-                  const headerBg = filteredColumnIds.has(colId) || sortedColumnIds.has(colId) ? "#fff2ea" : undefined;
+                  const headerBg = filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
                   return (
                     <th
                       key={header.id}

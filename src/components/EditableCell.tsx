@@ -236,7 +236,10 @@ export function EditableCell({
       {isSearchMatch && (
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ backgroundColor: isActiveSearchMatch ? "var(--cell-background-foundCursor)" : "var(--cell-background-found)" }}
+          style={{ backgroundColor: isActiveSearchMatch
+            ? (isFiltered ? "#ebd978" : isSorted ? "#ffd177" : "var(--cell-background-foundCursor)")
+            : (isFiltered ? "#ebe6a7" : isSorted ? "#ffdea5" : "var(--cell-background-found)")
+          }}
         />
       )}
       {!focused && search && value ? (
