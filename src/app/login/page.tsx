@@ -13,7 +13,7 @@ export default function Login() {
     <>
       <div className="grid grid-cols-[50%_50%] w-full h-screen">
         <div className="left-side flex w-full h-full items-center justify-center">
-          <div className="flex flex-col w-full max-w-[500px]">
+          <div className="flex flex-col w-full max-w-125">
             <LogoIcon />
             <h1 className="text-2xl font-medium my-12">Sign in to Airtable</h1>
 
@@ -41,7 +41,7 @@ export default function Login() {
         </div>
 
         <div className="right-side flex flex-row items-center align-center justify-center mt-12">
-          <div className="bg-[url('/omni_signin_large@2x.png')] bg-cover bg-center w-[395px] h-[580px] hover:scale-102 cursor-pointer transition-transform duration-200 ease-in-out">
+          <div className="bg-[url('/omni_signin_large@2x.png')] bg-cover bg-center w-98.75 h-145 hover:scale-102 cursor-pointer transition-transform duration-200 ease-in-out">
           </div>
         </div>
       </div>
