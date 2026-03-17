@@ -140,7 +140,6 @@ model Row {
   values Json
 
   @@index([tableId, order])
-  @@index([values], type: Gin)
 }
 
 model View {

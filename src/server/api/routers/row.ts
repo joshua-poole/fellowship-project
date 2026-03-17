@@ -263,28 +263,31 @@ export const rowRouter = createTRPCRouter({
       const startOrder = (last?.order ?? -1) + 1;
       const now = new Date().toISOString();
 
-      const rowsSql: string[] = [];
-      for (let i = 0; i < input.count; i++) {
-        const id = rowIdFast();
-        const order = startOrder + i;
-        const values: Record<string, string | number> = {};
-        for (const col of table.columns) {
-          if (col.type === "NUMBER") {
-            values[col.id] = faker.number.int({ min: 0, max: 10000 });
-          } else if (col.name.toLowerCase().includes("name")) {
-            values[col.id] = faker.person.fullName();
-          } else {
-            values[col.id] = faker.lorem.words({ min: 1, max: 3 });
+      const SQL_BATCH = 2000;
+      for (let offset = 0; offset < input.count; offset += SQL_BATCH) {
+        const batchSize = Math.min(SQL_BATCH, input.count - offset);
+        const rowsSql: string[] = [];
+        for (let i = 0; i < batchSize; i++) {
+          const id = rowIdFast();
+          const order = startOrder + offset + i;
+          const values: Record<string, string | number> = {};
+          for (const col of table.columns) {
+            if (col.type === "NUMBER") {
+              values[col.id] = faker.number.int({ min: 0, max: 10000 });
+            } else if (col.name.toLowerCase().includes("name")) {
+              values[col.id] = faker.person.fullName();
+            } else {
+              values[col.id] = faker.lorem.words({ min: 1, max: 3 });
+            }
           }
+          const valuesJson = JSON.stringify(values);
+          rowsSql.push(`('${id}', '${input.tableId}', ${order}, $json$${valuesJson}$json$::jsonb, '${now}')`);
         }
-        // Use dollar-quoting to safely embed JSON without escaping issues
-        const valuesJson = JSON.stringify(values);
-        rowsSql.push(`('${id}', '${input.tableId}', ${order}, $json$${valuesJson}$json$::jsonb, '${now}')`);
+        await ctx.db.$executeRawUnsafe(`
+          INSERT INTO "Row" ("id", "tableId", "order", "values", "updatedAt")
+          VALUES ${rowsSql.join(", ")};
+        `);
       }
-      await ctx.db.$executeRawUnsafe(`
-        INSERT INTO "Row" ("id", "tableId", "order", "values", "updatedAt")
-        VALUES ${rowsSql.join(", ")};
-      `);
       await ctx.db.table.update({
         where: { id: input.tableId },
         data: { rowCount: { increment: input.count } },
