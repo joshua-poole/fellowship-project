@@ -369,6 +369,8 @@
   }
 }
 
+/* Column selection highlight — injected dynamically via colSelectionStyleRef */
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

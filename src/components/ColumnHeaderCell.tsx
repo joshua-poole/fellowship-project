@@ -50,6 +50,7 @@ interface ColumnHeaderCellProps {
   onAddSort?: (columnId: string, direction: "asc" | "desc") => void;
   onAddFilter?: (columnId: string) => void;
   onHideColumn?: (columnId: string) => void;
+  onSelectColumn?: (columnId: string) => void;
 }
 
 export function ColumnHeaderCell({
@@ -65,16 +66,19 @@ export function ColumnHeaderCell({
   onAddSort,
   onAddFilter,
   onHideColumn,
+  onSelectColumn,
 }: ColumnHeaderCellProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleHeaderClick = (e: React.MouseEvent) => {
-    // Don't focus cell if clicking the chevron button
+    // Don't select column if clicking the chevron button
     if ((e.target as HTMLElement).closest("[data-chevron-trigger]")) return;
-    // Focus the first cell in this column
-    const table = (e.currentTarget as HTMLElement).closest("table");
-    const firstInput = table?.querySelector<HTMLInputElement>(`input[data-col-id="${col.id}"]`);
-    if (firstInput) firstInput.focus();
+    onSelectColumn?.(col.id);
+    // Focus the first cell in this column to show the border
+    requestAnimationFrame(() => {
+      const firstInput = document.querySelector<HTMLInputElement>(`input[data-col-id="${col.id}"]`);
+      if (firstInput) firstInput.focus();
+    });
   };
 
   return (
@@ -82,18 +86,22 @@ export function ColumnHeaderCell({
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <PopoverAnchor asChild>
           <div
-            className="group/header flex items-center w-full h-full overflow-hidden px-2 cursor-pointer"
+            className="group/header relative flex items-center w-full h-full overflow-hidden px-2 cursor-pointer"
             onClick={handleHeaderClick}
           >
-            {col.type === "NUMBER"
-              ? <Hash className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
-              : <ALargeSmall className="h-3.5 w-3.5 shrink-0 text-gray-400 mr-1" />
-            }
-            <span className="truncate font-medium text-xs text-gray-700 flex-1">{col.name}</span>
+            <div className="absolute left-0 top-1.75 right-5.5 h-4 leading-4 flex items-center">
+              <div className="absolute top-0 left-1.25 w-4 h-4">
+                {col.type === "NUMBER"
+                  ? <Hash className="h-4 w-4 shrink-0 text-black" strokeWidth={1.25}/>
+                  : <ALargeSmall className="h-4 w-4 shrink-0 text-black" strokeWidth={1.25}/>
+                }
+              </div>
+              <span className="truncate font-medium text-sm text-black absolute left-6.5 -top-0.5">{col.name}</span>
+            </div>
             <DropdownMenuTrigger asChild>
               <button
                 data-chevron-trigger
-                className="invisible group-hover/header:visible flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10"
+                className="invisible group-hover/header:visible absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10"
                 onClick={(e) => e.stopPropagation()}
               >
                 <ChevronDown className="h-3 w-3 text-gray-500" />

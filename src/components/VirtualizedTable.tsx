@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "~/components/ui/skeleton";
-import { EditableCell } from "~/components/EditableCell";
+import { EditableCell, setActiveCell } from "~/components/EditableCell";
 import { ColumnHeaderCell } from "~/components/ColumnHeaderCell";
 import { ColumnFieldForm } from "~/components/ColumnFieldForm";
 import { BulkCreateInput } from "~/components/BulkCreateInput";
@@ -36,6 +36,8 @@ export function useTableVirtualizer() {
 
 export function VirtualizedTable({ tableId, columns, rowCount, search, searchMatchIndex, onSearchMatchCountChange, filters, sorts, onAddSort, onAddFilter, onHideColumn }: VirtualizedTableProps) {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const selectedColumnRef = useRef<string | null>(null);
+  const colSelectionStyleRef = useRef<HTMLStyleElement | null>(null);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [addColumnOpen, setAddColumnOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; rowId: string } | null>(null);
@@ -76,8 +78,13 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
   const columnHelper = createColumnHelper<RowData>();
 
   // Ref for volatile render-time values — avoids rebuilding column defs on every state change
-  const renderRef = useRef({ selectedRows, rows, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn });
-  renderRef.current = { selectedRows, rows, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn };
+  const clearColumnSelection = useCallback(() => {
+    if (!selectedColumnRef.current) return;
+    selectedColumnRef.current = null;
+    if (colSelectionStyleRef.current) colSelectionStyleRef.current.textContent = "";
+  }, []);
+  const renderRef = useRef({ selectedRows, rows, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn, clearColumnSelection });
+  renderRef.current = { selectedRows, rows, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn, clearColumnSelection };
 
   const tableColumns = useMemo<ColumnDef<RowData, unknown>[]>(() => {
     const r = renderRef;
@@ -141,6 +148,16 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               onAddSort={r.current.onAddSort}
               onAddFilter={r.current.onAddFilter}
               onHideColumn={r.current.onHideColumn}
+              onSelectColumn={(colId) => {
+                selectedColumnRef.current = colId;
+                if (colSelectionStyleRef.current) {
+                  const escaped = CSS.escape(colId);
+                  colSelectionStyleRef.current.textContent = `
+                    td[data-col="${escaped}"]:not(:focus-within) { background-color: #f1f6ff !important; }
+                    th[data-col="${escaped}"] { background-color: #e7edf6 !important; }
+                  `;
+                }
+              }}
             />
           ),
           cell: (info) => {
@@ -163,6 +180,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                 isActiveSearchMatch={isActive}
                 isFiltered={fIds.has(col.id)}
                 isSorted={sIds.has(col.id)}
+                onClearColumnSelection={r.current.clearColumnSelection}
               />
             );
           },
@@ -228,11 +246,17 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
 
   scrollToRowRef.current = (index: number) => rowVirtualizer.scrollToIndex(index, { align: "center" });
 
+  const navigateToCell = useCallback((rowIndex: number, columnId: string) => {
+    setActiveCell(rowIndex, columnId);
+    rowVirtualizer.scrollToIndex(rowIndex, { align: "auto" });
+  }, [rowVirtualizer]);
+
   const virtualizerContextValue = useMemo<TableVirtualizerContextValue>(() => ({
     scrollToIndex: (index: number) => rowVirtualizer.scrollToIndex(index, { align: "auto" }),
+    navigateToCell,
     rowCount: tableRows.length,
     queryInput,
-  }), [rowVirtualizer, tableRows.length, queryInput]);
+  }), [rowVirtualizer, navigateToCell, tableRows.length, queryInput]);
 
   if (isLoading) {
     return (
@@ -247,10 +271,14 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
   return (
     <TableVirtualizerContext.Provider value={virtualizerContextValue}>
     <div className="flex flex-col justify-between h-full w-full bg-[#f6f8fc]">
+      {/* Dynamic style for column selection — avoids React re-renders */}
+      {/* eslint-disable-next-line react/no-unknown-property */}
+      <style ref={colSelectionStyleRef} />
       <div
         ref={tableContainerRef}
         onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
         className="flex-1 min-w-0 overflow-auto relative"
+        style={{ scrollPaddingTop: ROW_HEIGHT }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
         <table style={{ display: "grid", flexShrink: 0 }} className="text-sm">
@@ -263,12 +291,16 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
                 {headerGroup.headers.map((header) => {
                   const colId = header.column.id;
-                  const headerBg = filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
+                  const allSelected = rows.length > 0 && selectedRows.size === rows.length;
+                  const isAddCol = colId === "_addCol";
+                  const isSpecialCol = colId === "_rowNum" || isAddCol;
+                  const headerBg = isSpecialCol ? undefined : allSelected ? "#e7edf6" : filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
                   return (
                     <th
                       key={header.id}
-                      className="border-r border-b border-(--colors-border-default) overflow-hidden shrink-0 p-0 hover:bg-gray-50 bg-white"
-                      style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT, ...(headerBg && { backgroundColor: headerBg }) }}
+                      {...(!isSpecialCol ? { "data-col": colId } : {})}
+                      className={`border-r border-b overflow-hidden shrink-0 p-0 ${allSelected || colId === "_rowNum" ? "" : "hover:bg-gray-50"} bg-white`}
+                      style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT, borderRightColor: "var(--colors-border-default)", borderBottomColor: "hsl(0, 0%, 82%)", ...(headerBg && { backgroundColor: headerBg }) }}
                     >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
@@ -285,6 +317,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               height: `${rowVirtualizer.getTotalSize()}px`,
               position: "relative",
             }} className="bg-white"
+            onClick={clearColumnSelection}
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const row = tableRows[virtualRow.index]!;
@@ -302,13 +335,14 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                     width: "100%",
                     height: ROW_HEIGHT,
                   }}
-                  onContextMenu={(e) => handleRowContextMenu(e, row.original.id)}
                 >
                   {row.getVisibleCells().filter((cell) => cell.column.id !== "_addCol").map((cell, colIndex) => (
                     <td
                       key={cell.id}
-                      className={`border-b ${cell.id ? 'border-r' : ''} border-(--colors-border-default) focus-within:border-transparent shrink-0 ${colIndex === 0 ? "p-0 overflow-hidden" : "flex items-center px-1.5"} ${isSelected ? "bg-[#fbfcfe] focus-within:bg-white" : "bg-white"} relative`}
+                      data-col={cell.column.id}
+                      className={`border-b ${cell.id ? 'border-r' : ''} border-(--colors-border-default) focus-within:border-transparent shrink-0 ${colIndex === 0 ? "p-0 overflow-hidden" : "flex items-center px-1.5"} ${isSelected ? "bg-[#f1f6ff]" : "bg-white group-hover/row:bg-[#f8f8f8] group-focus-within/row:bg-[#f8f8f8]"} focus-within:bg-white relative`}
                       style={{ display: "flex", width: cell.column.getSize(), height: ROW_HEIGHT }}
+                      {...(colIndex > 0 ? { onContextMenu: (e: React.MouseEvent) => handleRowContextMenu(e, row.original.id) } : {})}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>

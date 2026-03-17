@@ -38,6 +38,8 @@ export interface EditableCellProps {
   isActiveSearchMatch?: boolean;
   isFiltered?: boolean;
   isSorted?: boolean;
+  isColumnSelected?: boolean;
+  onClearColumnSelection?: () => void;
 }
 
 export interface TableTabsBarProps {
@@ -81,6 +83,7 @@ export type TableQueryInput = z.infer<typeof RowGetByTableInputSchema>;
 
 export interface TableVirtualizerContextValue {
   scrollToIndex: (index: number) => void;
+  navigateToCell: (rowIndex: number, columnId: string) => void;
   rowCount: number;
   queryInput: TableQueryInput;
 }
