@@ -343,8 +343,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
 
       {/* Summary bar */}
       <div className="flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-7">
-        <div className="shrink-0 border-r border-(--colors-border-default) h-full w-21" />
-        <span className="px-3 tabular-nums">
+        <span className="shrink-0 border-r border-(--colors-border-default) h-full w-21 flex items-center justify-center tabular-nums text-[10px]">
           {(() => { const count = search || filters?.length ? rows.length : Number(rowCount); return `${count.toLocaleString()} ${count === 1 ? "record" : "records"}`; })()}
         </span>
         <BulkCreateInput queryInput={queryInput} />
