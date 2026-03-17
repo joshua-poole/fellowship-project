@@ -35,7 +35,7 @@ export function AppSidebar({ session, onSignOut }: AppSidebarProps) {
           className="group flex h-6 w-6 items-center justify-center rounded-md cursor-pointer transition-colors hover:bg-gray-100"
           onClick={() => router.push("/")}
         >
-          <span className="group-hover:hidden [&_svg]:h-6 [&_svg]:w-6 [&_path]:fill-black! flex flex-none">
+          <span className="group-hover:hidden [&_svg]:h-6 [&_svg]:w-6 [&_path]:!fill-[rgb(29,31,37)] flex flex-none">
             <LogoIcon />
           </span>
           <Icon name="ArrowLeft" className="h-5 w-5 hidden group-hover:block text-gray-600" />
@@ -48,10 +48,11 @@ export function AppSidebar({ session, onSignOut }: AppSidebarProps) {
 
       <div className="flex flex-auto flex-col items-center justify-end gap-3">
         <div className="w-7 h-7">
-
           <SidebarIcon icon="Question" />
         </div>
-        <SidebarIcon icon="Bell" />
+        <div className="translate-y-px">
+          <SidebarIcon icon="Bell"/>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="-ml-2">
@@ -93,7 +94,7 @@ export function AppSidebar({ session, onSignOut }: AppSidebarProps) {
 function SidebarIcon({ icon }: { icon: string }) {
   return (
     <div className="flex w-7 h-7 items-center rounded-full justify-center flex-reverse cursor-pointer hover:bg-gray-100 transition-colors">
-      <Icon name={icon} className="h-4 w-4 text-gray-600" />
+      <Icon name={icon} className="h-4 w-4 color-[rgb(29, 31, 37)]" />
     </div>
   );
 }

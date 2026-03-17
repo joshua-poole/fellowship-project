@@ -46,7 +46,7 @@ export function ViewsSidebar({
               className="h-8 py-1.5 pl-9 pr-7.5 w-full text-sm outline-none bg-transparent placeholder:text-gray-400 focus:border-red-600"
             />
             <div className="h-4 w-7 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2">
-              <Icon name="Gear" className="h-4 w-4 text-black cursor-pointer transform rotate-30" />
+              <Icon name="Cog" className="h-4 w-4 text-black cursor-pointer transform" />
             </div>
           </div>
         </div>
@@ -85,15 +85,15 @@ export function ViewsSidebar({
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <span className={`truncate text-sm font-medium`}>
+                  <span className={`truncate text-sm font-medium leading-[1.25]`}>
                     {v.name}
                   </span>
                 )}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="invisible group-hover:visible flex items-center justify-center h-5 w-5 rounded shrink-0 hover:bg-black/10 cursor-pointer">
-                    <Icon name="DotsThree" className="h-3.5 w-3.5 text-gray-500" />
+                  <button className="invisible group-hover:visible flex items-center justify-center h-4 w-4 rounded shrink-0 hover:bg-black/10 cursor-pointer">
+                    <Icon name="DotsThree" className="h-4 w-4" style={{ color: "rgb(29, 31, 37)" }} />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="bottom" align="start" className="w-56">

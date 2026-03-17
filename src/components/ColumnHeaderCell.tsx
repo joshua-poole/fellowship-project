@@ -67,17 +67,17 @@ export function ColumnHeaderCell({
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <PopoverAnchor asChild>
           <div
-            className="group/header relative flex items-center w-full h-full overflow-hidden px-2 cursor-pointer"
+            className={`group/header relative flex items-center w-full h-full overflow-hidden px-2 cursor-pointer pt-px ${isFirstCol ? "pl-px" : ""}`}
             onClick={handleHeaderClick}
           >
             <div className="absolute left-0 top-1.75 right-5.5 h-4 leading-4 flex items-center">
               <div className="absolute top-0 left-1.25 w-4 h-4">
                 {col.type === "NUMBER"
-                  ? <Icon name="HashStraight" className="h-4 w-4 shrink-0" style={{ color: "var(--colors-foreground-default)" }} />
-                  : <Icon name="TextAlt" className="h-4 w-4 shrink-0" style={{ color: "var(--colors-foreground-default)" }} />
+                  ? <Icon name="HashStraight" className="flex-none h-4 w-4 shrink-0" style={{ color: "var(--colors-foreground-default)" }} />
+                  : <Icon name="TextAlt" className="flex-none h-4 w-4 shrink-0" style={{ color: "var(--colors-foreground-default)" }} />
                 }
               </div>
-              <span className="truncate font-medium text-sm text-black absolute left-6.5 -top-0.5">{col.name}</span>
+              <span className={`truncate font-medium leading-normal font-weight-500 absolute left-6.25 -top-0.5 ${!isFirstCol ? "translate-x-px" : ""}`}>{col.name}</span>
             </div>
             <DropdownMenuTrigger asChild>
               <button

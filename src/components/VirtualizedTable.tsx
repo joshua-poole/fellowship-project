@@ -114,7 +114,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
             });
           return (
             <div className="w-8 h-8 flex justify-center ml-3 pt-1.75">
-              <span className={`select-none text-gray-500 tabular-nums ${isSelected ? "hidden" : "group-hover/row:hidden"}`} style={{ fontSize: 11 }}>
+              <span className={`select-none text-gray-500 tabular-nums font-normal ${isSelected ? "hidden" : "group-hover/row:hidden"}`} style={{ fontSize: 12, fontWeight: 400 }}>
                 {row.index + 1}
               </span>
               <div className={`${isSelected ? "flex" : "hidden group-hover/row:flex"}`}>
@@ -184,7 +184,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               />
             );
           },
-          size: 180,
+          size: col.type === "NUMBER" ? 183 : 180,
         }) as ColumnDef<RowData, unknown>,
       );
     }
@@ -196,7 +196,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
         header: () => (
           <Popover open={r.current.addColumnOpen} onOpenChange={setAddColumnOpen}>
             <PopoverTrigger asChild>
-              <div className="flex items-center justify-center w-23.5 h-8 cursor-pointer hover:bg-gray-100">
+              <div className="flex justify-center w-[93px] pt-[7px] h-8 cursor-pointer hover:bg-gray-100 border-r border-(--colors-border-default)">
                 <Icon name="Plus" className="h-4 w-4" />
               </div>
             </PopoverTrigger>
@@ -288,18 +288,19 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
           >
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
-                {headerGroup.headers.map((header) => {
+                {headerGroup.headers.map((header, headerIndex) => {
                   const colId = header.column.id;
                   const allSelected = rows.length > 0 && selectedRows.size === rows.length;
                   const isAddCol = colId === "_addCol";
                   const isSpecialCol = colId === "_rowNum" || isAddCol;
+                  const isFirstDataCol = headerIndex === 1;
                   const headerBg = isSpecialCol ? undefined : allSelected ? "#e7edf6" : filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
                   return (
                     <th
                       key={header.id}
                       {...(!isSpecialCol ? { "data-col": colId } : {})}
-                      className={`border-r border-b overflow-hidden shrink-0 p-0 ${allSelected || colId === "_rowNum" ? "" : "hover:bg-gray-50"} bg-white`}
-                      style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT, borderRightColor: "var(--colors-border-default)", borderBottomColor: "hsl(0, 0%, 82%)", ...(headerBg && { backgroundColor: headerBg }) }}
+                      className={`${isAddCol ? "" : "border-r"} ${colId === "_rowNum" ? "border-r-[#ccc]" : ""} border-b overflow-hidden shrink-0 p-0 ${allSelected || colId === "_rowNum" ? "" : "hover:bg-gray-50"} bg-white ${colId === "_rowNum" ? "" : "pt-px"}`}
+                      style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT, ...(colId !== "_rowNum" && { borderRightColor: "var(--colors-border-default)" }), borderBottomColor: "hsl(0, 0%, 82%)", ...(headerBg && { backgroundColor: headerBg }) }}
                     >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
@@ -340,7 +341,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                       key={cell.id}
                       data-col={cell.column.id}
                       className={`border-b ${cell.id ? 'border-r' : ''} border-(--colors-border-default) focus-within:border-transparent shrink-0 ${colIndex === 0 ? "p-0 overflow-hidden" : "flex items-center px-1.5"} ${isSelected ? "bg-[#f1f6ff]" : "bg-white group-hover/row:bg-[#f8f8f8] group-focus-within/row:bg-[#f8f8f8]"} focus-within:bg-white relative`}
-                      style={{ display: "flex", width: cell.column.getSize(), height: ROW_HEIGHT }}
+                      style={{ display: "flex", width: cell.column.getSize(), height: ROW_HEIGHT, ...(colIndex === 0 && { borderRightColor: "#ccc" }) }}
                       {...(colIndex > 0 ? { onContextMenu: (e: React.MouseEvent) => handleRowContextMenu(e, row.original.id) } : {})}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -352,15 +353,15 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
           </tbody>
         </table>
 
-        {/* Ghost / add row */}
+        {/* add row */}
         <div
           className="flex items-center border-b border-r border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors bg-white"
-          style={{ height: ROW_HEIGHT, width: dataColumnsWidth, flexShrink: 0 }}
+          style={{ height: 31, width: dataColumnsWidth, flexShrink: 0 }}
           onClick={() => createRow.mutate({ tableId })}
         >
-          <div className="shrink-0 border-r border-(--colors-border-default) h-full w-21">
+          <div className="shrink-0 border-r border-[#ccc] h-full w-21">
             <div className="w-8 h-8 flex items-center justify-center ml-3">
-              <Icon name="Plus" className="h-4 w-4 text-black" />
+              <Icon name="Plus" className="h-4 w-4 -translate-y-px" style={{ color: "#545454" }} />
             </div>
           </div>
         </div>
@@ -370,14 +371,16 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
         )}
 
         {/* Filler to extend row number column border to bottom of container */}
-        <div className="flex flex-1 border-r w-21"/></div>
+        <div className="flex flex-1 border-r w-21 border-[#ccc]"/></div>
       </div>
 
       {/* Summary bar */}
-      <div className="flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-8.5">
-        <span className="shrink-0 border-r border-(--colors-border-default) h-full w-21 flex items-center justify-center tabular-nums text-[11px] text-black pt-3px px-2 pb-0.5">
-          {(() => { const count = search || filters?.length ? rows.length : Number(rowCount); return `${count.toLocaleString()} ${count === 1 ? "record" : "records"}`; })()}
-        </span>
+      <div className="relative flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-8.5">
+        <div className="absolute bottom-0 left-0 inline-flex border-r border-[#ccc] h-full w-21">
+          <span className="h-[24px] pl-2 pt-[5px] pb-[2px] pr-[8px] text-[11px] text-black tabular-nums">
+            {(() => { const count = search || filters?.length ? rows.length : Number(rowCount); return `${count.toLocaleString()} ${count === 1 ? "record" : "records"}`; })()}
+          </span>
+        </div>
         <BulkCreateInput queryInput={queryInput} />
       </div>
 

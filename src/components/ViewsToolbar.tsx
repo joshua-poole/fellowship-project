@@ -45,7 +45,7 @@ export function ViewsToolbar({
     <div className="flex flex-none gap-2 h-[47px] items-center border-b border-(--colors-border-default) shrink-0">
       <div className="pl-3 pr-2 flex flex-auto items-center">
         <button className="h-8 w-8 rounded-sm hover:bg-gray-100 mr-1 flex items-center justify-center cursor-pointer" style={{ padding: 0 }} onClick={onToggleViewsSidebar}>
-          <Icon name="List" className="h-4 w-4" style={{ color: "var(--colors-foreground-subtle)" }} />
+          <Icon name="List" className="h-4 w-4" style={{ color: "rgb(29, 31, 37)" }} />
         </button>
         <button className="flex items-center px-2 py-0 h-6.5 text-sm hover:bg-gray-100 rounded-sm">
           <GridFeatureIcon className="h-4 w-4" style={{ color: "rgb(22, 110, 225)" }} />

@@ -32,8 +32,8 @@ export function TableTabsBar({
   const tableBarBg = baseColor ? lightTint(baseColor) : "#f1f5ff";
 
   return (
-    <div className="relative flex items-center justify-between shrink-0 border-(--colors-border-default) w-full h-8 after:content-[''] after:block after:absolute after:left-0 after:right-0 after:bottom-0 after:h-0.5 after:z-1 after:bg-linear-to-b after:from-transparent after:to-black/10" style={{ backgroundColor: tableBarBg }}>
-      <div className="flex items-stretch h-full overflow-visible -ml-px">
+    <div className="relative flex items-center justify-between shrink-0 border-(--colors-border-default) w-full h-8 after:content-[''] after:block after:absolute after:left-0 after:right-0 after:bottom-0 after:h-0.5 after:z-1 after:bg-linear-to-b after:from-transparent after:to-black/10" style={{ backgroundColor: tableBarBg, clipPath: "inset(-3px 0px 0px)" }}>
+      <div className="flex items-stretch h-full overflow-visible">
         {tables.map((t, index) => {
           const isActive = t.id === activeTableId;
           const prevActive = index > 0 && tables[index - 1]?.id === activeTableId;
@@ -49,8 +49,8 @@ export function TableTabsBar({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className={`relative flex items-center text-sm transition-colors cursor-pointer bg-white font-medium rounded-tr-sm ${index > 0 ? "rounded-tl-sm" : ""} border-x border-t border-b border-(--colors-border-default) border-b-white -mt-px z-2`}
-                      style={{ paddingLeft: 12, paddingRight: 32 }}
+                      className={`relative flex items-center text-sm transition-colors cursor-pointer bg-white font-medium rounded-tr-[3px] ${index > 0 ? "rounded-tl-[3px]" : ""} z-2`}
+                      style={{ paddingLeft: 12, paddingRight: 32, boxShadow: "0px 0px 1px rgba(0, 0, 0, 0.32), 0px 0px 2px rgba(0, 0, 0, 0.08), 0px 1px 3px rgba(0, 0, 0, 0.08)" }}
                     >
                       {t.name}
                       <div className="absolute top-0 bottom-0 flex items-center" style={{ right: 12 }}>
@@ -97,13 +97,13 @@ export function TableTabsBar({
         </button>
 
         <button
-          className="group flex items-center px-3 transition-colors cursor-pointer gap-0"
+          className="group flex items-center px-3 ml-px transition-colors cursor-pointer gap-0"
           onClick={onCreateTable}
           disabled={isCreating}
           style={{ height: 32 }}
         >
-          <Icon name="Plus" className="h-4 w-4 flex-none my-1 text-gray-500 group-hover:text-black transition-colors" />
-          <span className="text-sm text-gray-500 group-hover:text-black ml-2 transition-colors leading-tight">Add or import</span>
+          <Icon name="Plus" className="h-4 w-4 flex-none my-1 group-hover:text-black transition-colors" style={{ color: "rgba(0, 0, 0, 0.65)" }} />
+          <span className="text-sm group-hover:text-black ml-2 transition-colors leading-tight" style={{ color: "rgba(0, 0, 0, 0.65)" }}>Add or import</span>
         </button>
       </div>
 
