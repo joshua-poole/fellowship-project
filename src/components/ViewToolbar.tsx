@@ -7,25 +7,12 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { Switch } from "~/components/ui/switch";
-import {
-  Search,
-  ListFilter,
-  ArrowDownUp,
-  EyeOff,
-  X,
-  Plus,
-  ChevronUp,
-  ChevronDown,
-  GripVertical,
-  ALargeSmall,
-  Hash,
-} from "lucide-react";
-import type React from "react";
+import { Icon } from "./icons/Icon";
 import type { ColDef } from "~/types/Props";
 
 function ColumnTypeIcon({ type, className }: { type: string; className?: string }) {
-  if (type === "NUMBER") return <Hash className={className} />;
-  return <ALargeSmall className={className} />;
+  if (type === "NUMBER") return <Icon name="HashStraight" className={className} />;
+  return <Icon name="TextAlt" className={className} />;
 }
 
 export type FilterConfig = {
@@ -97,7 +84,7 @@ export function SearchBar({
         <button
           className={`w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 ${isOpen ? "bg-gray-100" : ""}`}
         >
-          <Search className="h-4 w-4 text-gray-500" />
+          <Icon name="MagnifyingGlass" className="h-4 w-4" style={{ color: "var(--colors-foreground-subtle)" }} />
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -131,20 +118,20 @@ export function SearchBar({
             disabled={matchCount === 0}
             className="shrink-0 p-0.5 rounded hover:bg-gray-100 disabled:opacity-30"
           >
-            <ChevronUp className="h-4 w-4 text-gray-500" />
+            <Icon name="ChevronUp" className="h-4 w-4 text-gray-500" />
           </button>
           <button
             onClick={onNext}
             disabled={matchCount === 0}
             className="shrink-0 p-0.5 rounded hover:bg-gray-100 disabled:opacity-30"
           >
-            <ChevronDown className="h-4 w-4 text-gray-500" />
+            <Icon name="ChevronDown" className="h-4 w-4 text-gray-500" />
           </button>
           <button
             onClick={() => setIsOpen(false)}
             className="shrink-0 p-0.5 rounded hover:bg-gray-100"
           >
-            <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+            <Icon name="X" className="h-4 w-4 text-gray-400 hover:text-gray-600" />
           </button>
         </div>
       </PopoverContent>
@@ -190,9 +177,9 @@ export function FilterPopover({
           className="flex items-center px-2 py-1 text-sm hover:bg-gray-100 rounded-sm transition-colors"
           style={filters.length > 0
             ? { backgroundColor: "#cff5d1", color: "#000" }
-            : { color: "#6b7280" }}
+            : { color: "var(--colors-foreground-subtle)" }}
         >
-          <ListFilter className="h-4 w-4" />
+          <Icon name="FunnelSimple" className="h-4 w-4" />
           <span className="ml-1">
             {filters.length > 0
               ? `Filtered by ${[...new Set(filters.map((f) => columns.find((c) => c.id === f.columnId)?.name ?? "field"))].join(", ")}`
@@ -264,7 +251,7 @@ export function FilterPopover({
                   onClick={() => removeFilter(i)}
                   className="shrink-0 p-1 rounded hover:bg-gray-100"
                 >
-                  <X className="h-4 w-4 text-gray-400 hover:text-red-500" />
+                  <Icon name="X" className="h-4 w-4 text-gray-400 hover:text-red-500" />
                 </button>
               </div>
             );
@@ -274,7 +261,7 @@ export function FilterPopover({
             onClick={addFilter}
             className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 pt-1"
           >
-            <Plus className="h-3 w-3" />
+            <Icon name="Plus" className="h-3 w-3" />
             Add filter
           </button>
         </div>
@@ -323,9 +310,9 @@ export function SortPopover({
           className="flex items-center px-2 py-1 mr-2 text-sm hover:bg-gray-100 rounded-sm transition-colors"
           style={sorts.length > 0
             ? { backgroundColor: "#ffe0cc", color: "#000" }
-            : { color: "#6b7280" }}
+            : { color: "var(--colors-foreground-subtle)" }}
         >
-          <ArrowDownUp className="h-4 w-4" />
+          <Icon name="ArrowsDownUp" className="h-4 w-4" />
           <span className="ml-1">
             {sorts.length > 0
               ? `Sorted by ${sorts.length} field${sorts.length > 1 ? "s" : ""}`
@@ -384,7 +371,7 @@ export function SortPopover({
                   onClick={() => removeSort(i)}
                   className="shrink-0 p-1 rounded hover:bg-gray-100"
                 >
-                  <X className="h-4 w-4 text-gray-400 hover:text-red-500" />
+                  <Icon name="X" className="h-4 w-4 text-gray-400 hover:text-red-500" />
                 </button>
               </div>
             );
@@ -395,7 +382,7 @@ export function SortPopover({
               onClick={addSort}
               className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 pt-1"
             >
-              <Plus className="h-3 w-3" />
+              <Icon name="Plus" className="h-3 w-3" />
               Add sort
             </button>
           )}
@@ -439,9 +426,9 @@ export function HideFieldsPopover({
           className="flex items-center px-2 py-1 mr-2 text-sm hover:bg-gray-100 rounded-sm transition-colors"
           style={hiddenColumns.length > 0
             ? { backgroundColor: "#c4ecff", color: '#000' }
-            : { color: "#6b7280" }}
+            : { color: "var(--colors-foreground-subtle)" }}
         >
-          <EyeOff className="h-4 w-4" />
+          <Icon name="EyeSlash" className="h-4 w-4" />
           <span className="ml-1">
             {hiddenColumns.length > 0
               ? `${hiddenColumns.length} hidden field${hiddenColumns.length > 1 ? "s" : ""}`
@@ -477,7 +464,7 @@ export function HideFieldsPopover({
                 />
                 <ColumnTypeIcon type={col.type} className="h-4 w-4 text-gray-400 shrink-0" />
                 <span className="text-sm truncate flex-1">{col.name}</span>
-                <GripVertical className="h-4 w-4 text-gray-300 shrink-0" />
+                <Icon name="DotsSixVertical" className="h-4 w-4 text-gray-300 shrink-0" />
               </div>
             );
           })}
@@ -505,10 +492,10 @@ export function HideFieldsPopover({
 
 /* ─── Toolbar Button ─── */
 
-export function ToolbarButton({ icon: Icon, label }: { icon: React.ComponentType<{ className?: string }>; label: string }) {
+export function ToolbarButton({ icon, label }: { icon: string; label: string }) {
   return (
-    <button className="flex items-center px-2 py-1 mr-2 text-sm text-gray-500 hover:bg-gray-100 rounded-sm transition-colors">
-      <Icon className="h-4 w-4 flex-none" />
+    <button className="flex items-center px-2 py-1 mr-2 text-sm hover:bg-gray-100 rounded-sm transition-colors" style={{ color: "var(--colors-foreground-subtle)" }}>
+      <Icon name={icon} className="h-4 w-4 flex-none" />
       <span className="hidden lg:inline ml-1">{label}</span>
     </button>
   );

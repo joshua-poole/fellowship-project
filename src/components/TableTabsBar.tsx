@@ -1,20 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
-import {
-  ChevronDown,
-  Plus,
-  ArrowUpCircle,
-  Pencil,
-  EyeOff,
-  SlidersHorizontal,
-  Copy,
-  GanttChart,
-  Info,
-  Lock,
-  X,
-  Trash2,
-} from "lucide-react";
+import { Icon } from "./icons/Icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +32,7 @@ export function TableTabsBar({
   const tableBarBg = baseColor ? lightTint(baseColor) : "#f1f5ff";
 
   return (
-    <div className="relative flex items-center justify-between shrink-0 border-b border-t border-(--colors-border-default) w-full" style={{ height: 34, backgroundColor: tableBarBg }}>
+    <div className="relative flex items-center justify-between shrink-0 border-(--colors-border-default) w-full h-8 after:content-[''] after:block after:absolute after:left-0 after:right-0 after:bottom-0 after:h-0.5 after:z-1 after:bg-linear-to-b after:from-transparent after:to-black/10" style={{ backgroundColor: tableBarBg }}>
       <div className="flex items-stretch h-full overflow-visible -ml-px">
         {tables.map((t, index) => {
           const isActive = t.id === activeTableId;
@@ -62,30 +49,30 @@ export function TableTabsBar({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className={`relative flex items-center text-sm transition-colors cursor-pointer bg-white font-medium rounded-tr-sm ${index > 0 ? "rounded-tl-sm" : ""} border-x border-t border-(--colors-border-default) -mt-px z-10`}
-                      style={{ paddingLeft: 12, paddingRight: 32, marginBottom: -1, paddingBottom: 1 }}
+                      className={`relative flex items-center text-sm transition-colors cursor-pointer bg-white font-medium rounded-tr-sm ${index > 0 ? "rounded-tl-sm" : ""} border-x border-t border-b border-(--colors-border-default) border-b-white -mt-px z-2`}
+                      style={{ paddingLeft: 12, paddingRight: 32 }}
                     >
                       {t.name}
                       <div className="absolute top-0 bottom-0 flex items-center" style={{ right: 12 }}>
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <Icon name="ChevronDown" className="h-4 w-4 text-gray-400" />
                       </div>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" side="bottom" sideOffset={8} className="p-3 w-83! h-108.5! max-h-108.5!">
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><ArrowUpCircle className="h-4 w-4 mr-2" />Import data<ChevronDown className="h-4 w-4 -rotate-90" /></DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Icon name="ArrowCircleUp" className="h-4 w-4 mr-2" />Import data<Icon name="ChevronDown" className="h-4 w-4 -rotate-90" /></DropdownMenuItem>
                     <DropdownMenuSeparator className="m-2 opacity-50" />
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Pencil className="h-4 w-4 mr-2" />Rename table</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><EyeOff className="h-4 w-4 mr-2" />Hide table</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><SlidersHorizontal className="h-4 w-4 mr-2" />Manage fields</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Copy className="h-4 w-4 mr-2" />Duplicate table</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Icon name="Pencil" className="h-4 w-4 mr-2" />Rename table</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Icon name="EyeSlash" className="h-4 w-4 mr-2" />Hide table</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Icon name="SlidersHorizontal" className="h-4 w-4 mr-2" />Manage fields</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Icon name="Copy" className="h-4 w-4 mr-2" />Duplicate table</DropdownMenuItem>
                     <DropdownMenuSeparator className="m-2 opacity-50" />
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><GanttChart className="h-4 w-4 mr-2" />Configure date dependencies</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Icon name="Gantt" className="h-4 w-4 mr-2" />Configure date dependencies</DropdownMenuItem>
                     <DropdownMenuSeparator className="m-2 opacity-50" />
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Info className="h-4 w-4 mr-2" />Edit table description</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Lock className="h-4 w-4 mr-2" />Edit table permissions</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Icon name="Info" className="h-4 w-4 mr-2" />Edit table description</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Icon name="Lock" className="h-4 w-4 mr-2" />Edit table permissions</DropdownMenuItem>
                     <DropdownMenuSeparator className="m-2 opacity-50" />
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><X className="h-4 w-4 mr-2" />Clear data</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0" disabled={tables.length <= 1} onClick={() => onDeleteTable(t.id, t.name)}><Trash2 className="h-4 w-4 mr-2" />Delete table</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0"><Icon name="X" className="h-4 w-4 mr-2" />Clear data</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-sm rounded px-2 py-2 gap-0" disabled={tables.length <= 1} onClick={() => onDeleteTable(t.id, t.name)}><Icon name="Trash" className="h-4 w-4 mr-2" />Delete table</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
@@ -106,7 +93,7 @@ export function TableTabsBar({
           </div>
         )}
         <button className="h-8 flex flex-none justify-center items-center gap-1 transition-colors px-3 cursor-pointer">
-          <ChevronDown className="h-4 w-4 text-gray-500" strokeWidth={1}/>
+          <Icon name="ChevronDown" className="h-4 w-4 text-gray-500" />
         </button>
 
         <button
@@ -115,7 +102,7 @@ export function TableTabsBar({
           disabled={isCreating}
           style={{ height: 32 }}
         >
-          <Plus className="h-4 w-4 flex-none my-1 text-gray-500 group-hover:text-black transition-colors" strokeWidth={1.5}/>
+          <Icon name="Plus" className="h-4 w-4 flex-none my-1 text-gray-500 group-hover:text-black transition-colors" />
           <span className="text-sm text-gray-500 group-hover:text-black ml-2 transition-colors leading-tight">Add or import</span>
         </button>
       </div>
@@ -124,7 +111,7 @@ export function TableTabsBar({
         <button className="flex items-center text-sm text-gray-500 h-8 pr-1">
           Tools
         </button>
-        <ChevronDown className="h-4 w-4 flex-none" strokeWidth={1}/>
+        <Icon name="ChevronDown" className="h-4 w-4 flex-none" />
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { authClient, signOut } from "~/server/better-auth/client";
 import { useRouter } from "next/navigation";
 import { Logo } from "./Logo";
-import { Bell, CircleQuestionMark, Menu, Book, Globe, MessageSquare, Mail, Laptop, Play, Gift, CircleStar, Code, User, Users, Languages, Palette, LinkIcon, Wrench, Trash2, LogOut } from "lucide-react";
+import { Icon } from "./icons/Icon";
 import Search from "./ui/search";
 import {
   DropdownMenu,
@@ -47,7 +47,7 @@ export function NavBar() {
   return (
     <nav className="flex items-center justify-between p-3 fixed top-0 left-0 right-0 z-50 bg-white h-14 border-b border-gray-200 w-full">
       <div className="flex items-center gap-5 pr-6">
-        <Menu className="h-5 w-5 cursor-pointer color-gray-300" />
+        <Icon name="List" className="h-5 w-5 cursor-pointer color-gray-300" />
           <Link href="/">
             <Logo/>
           </Link>
@@ -61,28 +61,28 @@ export function NavBar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="cursor-pointer rounded-full p-1.5 hover:bg-gray-100 transition-colors">
-              <CircleQuestionMark className="h-4 w-4" />
+              <Icon name="Question" className="h-4 w-4" />
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem className="text-xs text-gray-400">Support</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Book/> Help center</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Globe/> Ask the community</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><MessageSquare/> Message support</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Mail/> Contact sales</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Book" className="h-4 w-4" /> Help center</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Globe" className="h-4 w-4" /> Ask the community</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="ChatCircleText" className="h-4 w-4" /> Message support</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="EnvelopeSimple" className="h-4 w-4" /> Contact sales</DropdownMenuItem>
             <DropdownMenuItem className="text-xs text-gray-400">Education</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Laptop/> Keyboard shortcuts</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Play/> Webinars</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Gift/> Whats&apos;s new</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Code/> API documentation</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Laptop" className="h-4 w-4" /> Keyboard shortcuts</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Play" className="h-4 w-4" /> Webinars</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Gift" className="h-4 w-4" /> Whats&apos;s new</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Code" className="h-4 w-4" /> API documentation</DropdownMenuItem>
             <DropdownMenuItem className="text-xs text-gray-400">Upgrade</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><CircleStar/> Plans and pricing</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Star" className="h-4 w-4" /> Plans and pricing</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="rounded-full border border-gray-200 p-1.5 cursor-pointer hover:bg-gray-100 transition-colors">
-              <Bell className="h-4 w-4" />
+              <Icon name="Bell" className="h-4 w-4" />
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
@@ -103,21 +103,21 @@ export function NavBar() {
               <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
             </div>
             <DropdownMenuSeparator className="my-3"/>
-            <DropdownMenuItem className="cursor-pointer"><User/>Account</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer"><Users/>Manage groups</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer"><Bell/>Notification preferences</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer"><Languages/>Language preferences</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer"><Palette/>Appearance</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="User" className="h-4 w-4" />Account</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="Users" className="h-4 w-4" />Manage groups</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="Bell" className="h-4 w-4" />Notification preferences</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="Translate" className="h-4 w-4" />Language preferences</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="Palette" className="h-4 w-4" />Appearance</DropdownMenuItem>
             <DropdownMenuSeparator className="my-3"/>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Mail/>Contact sales</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><CircleStar/>Upgrade</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Mail/>Tell a friend</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="EnvelopeSimple" className="h-4 w-4" />Contact sales</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Star" className="h-4 w-4" />Upgrade</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="EnvelopeSimple" className="h-4 w-4" />Tell a friend</DropdownMenuItem>
             <DropdownMenuSeparator className="my-3"/>
-            <DropdownMenuItem className="cursor-pointer text-sm"><LinkIcon/>Integrations</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Wrench/>Builder hub</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Link" className="h-4 w-4" />Integrations</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Wrench" className="h-4 w-4" />Builder hub</DropdownMenuItem>
             <DropdownMenuSeparator className="my-3"/>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Trash2/>Trash</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm" onClick={handleSignOut}><LogOut/>Log out</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Trash" className="h-4 w-4" />Trash</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm" onClick={handleSignOut}><Icon name="SignOut" className="h-4 w-4" />Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

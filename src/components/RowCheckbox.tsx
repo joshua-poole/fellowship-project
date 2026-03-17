@@ -1,5 +1,3 @@
-import { Check } from "lucide-react";
-
 const ACTIVE_COLOR = "rgb(22, 110, 225)";
 
 export function RowCheckbox({ checked, onClick }: { checked: boolean; onClick: () => void }) {
@@ -12,11 +10,17 @@ export function RowCheckbox({ checked, onClick }: { checked: boolean; onClick: (
         height: 16,
         borderRadius: 3,
         backgroundColor: checked ? ACTIVE_COLOR : "white",
-        border: `1.5px solid ${checked ? ACTIVE_COLOR : "#d1d5db"}`,
+        border: `1px solid ${checked ? ACTIVE_COLOR : "#d0d0d0"}`,
         boxSizing: "content-box",
       }}
     >
-      {checked && <Check style={{ width: 9, height: 9, color: "white", strokeWidth: 3 }} />}
+      {checked && (
+        <div className="checkbox flex items-center justify-center text-white">
+          <svg width="9" height="9" viewBox="0 0 16 16" style={{ shapeRendering: "geometricPrecision" }} className="flex-none" aria-hidden="true">
+            <use fill="currentColor" href="/icons/icon_definitions.svg#CheckBold" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }

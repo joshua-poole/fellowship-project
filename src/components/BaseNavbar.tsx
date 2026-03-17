@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, History, Link as LinkIcon } from "lucide-react";
+import { Icon } from "./icons/Icon";
 import { Button } from "~/components/ui/button";
 import {
   Popover,
@@ -31,7 +31,7 @@ export function BaseNavbar({ base, baseId, baseColor, activeTab, onTabChange, on
 
   return (
     // bar
-    <div className="grid grid-cols-[minmax(48px,1fr)_1fr_1fr] grid-rows-1 w-full gap-2 h-14">
+    <div className="grid grid-cols-[minmax(48px,1fr)_1fr_1fr] grid-rows-1 w-full gap-2 h-14.25 border-b border-(--colors-border-default)">
       {/* logo + base name */}
       <div className="flex pl-4">
         <div className="w-full flex-none flex items-center justify-start gap-2">
@@ -41,8 +41,8 @@ export function BaseNavbar({ base, baseId, baseColor, activeTab, onTabChange, on
           <Popover open={basePopoverOpen} onOpenChange={setBasePopoverOpen}>
             <PopoverTrigger asChild>
               <button className="flex items-center cursor-pointer hover:bg-gray-100 rounded transition-colors">
-                <span className="truncate" style={{ lineHeight: "24px", fontWeight: 700, fontFamily: "var(--font-family-body)", fontSize: "var(--font-size-heading-small)", minWidth: 0, flex: "0 1 auto" }}>{base.name}</span>
-                <ChevronDown className="h-4 w-4 text-gray-400 shrink-0 flex-none ml-1" />
+                <span className="truncate" style={{ lineHeight: "24px", fontWeight: 675, fontFamily: "var(--font-family-heading)", fontSize: 17, minWidth: 0, flex: "0 1 auto", WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale", letterSpacing: "-.01rem" }}>{base.name}</span>
+                <Icon name="ChevronDown" className="h-4 w-4 text-gray-400 shrink-0 flex-none ml-1" />
               </button>
             </PopoverTrigger>
             <PopoverContent side="bottom" align="start" className="w-96 p-0">
@@ -80,21 +80,20 @@ export function BaseNavbar({ base, baseId, baseColor, activeTab, onTabChange, on
         <div className="flex-inline items-center gap-2">
           <div className="flex-none flex items-center gap-2">
             <div className="flex items-center justify-center w-7 h-7 rounded-full cursor-pointer hover:bg-gray-100 transition-colors">
-              <History className="h-4 w-4 text-gray-600" />
+              <Icon name="ClockCounterClockwise" className="h-4 w-4 text-gray-600" />
             </div>
-            <div role="button" className="flex items-baseline justify-center cursor-pointer px-3 focus-visible mx-2 h-8 leading-8 rounded-full bg-[#0000000d] text-sm">Trial: 6 days left</div>
-            <Button variant="outline" className="border border-(--colors-border-default) h-7 px-2! py-0 gap-0 flex-none hover:bg-white">
+            <Button variant="outline" className="border-0 h-7 px-2! py-0 gap-0 flex-none hover:bg-white" style={{ boxShadow: "0px 0px 1px rgba(0,0,0,0.32), 0px 0px 2px rgba(0,0,0,0.08), 0px 1px 3px rgba(0,0,0,0.08)", fontSize: 13, lineHeight: "22px", fontWeight: 400 }}>
               <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" className="flex-none mr-1">
                 <path fillRule="evenodd" d="M13.5 2.5c.546 0 1 .454 1 1v4a.5.5 0 0 1-1 0v-4H6v9h2.5a.5.5 0 0 1 0 1h-6c-.546 0-1-.454-1-1v-9c0-.546.454-1 1-1h11Zm-11 1v9H5v-9H2.5Z M11.124 8.67a.5.5 0 0 1 .653-.086l3 2a.5.5 0 0 1 0 .832l-3 2A.5.5 0 0 1 11 13V9a.5.5 0 0 1 .124-.33Z" />
               </svg>
-              Launch
+              <span style={{ transform: "translateY(-0.5px)" }}>Launch</span>
             </Button>
-            <Button variant="outline" className="flex shrink-0 items-center justify-center border border-(--colors-border-default) w-7 h-7 hover:bg-white">
-              <LinkIcon className="h-4 w-4 flex-none" />
+            <Button variant="outline" className="flex shrink-0 items-center justify-center border-0 w-7 h-7 hover:bg-white" style={{ boxShadow: "0px 0px 1px rgba(0,0,0,0.32), 0px 0px 2px rgba(0,0,0,0.08), 0px 1px 3px rgba(0,0,0,0.08)" }}>
+              <Icon name="Link" className="h-4 w-4 flex-none" />
             </Button>
             <Button
               className="h-7 px-3 py-0 text-white border-0 rounded-[6px]"
-              style={{ backgroundColor: baseColor ?? "#3b66a3" }}
+              style={{ backgroundColor: baseColor ?? "#3b66a3", boxShadow: "0px 0px 1px rgba(0,0,0,0.32), 0px 0px 2px rgba(0,0,0,0.08), 0px 1px 3px rgba(0,0,0,0.08)", fontSize: 13, lineHeight: "22px", fontWeight: 500 }}
             >Share</Button>
           </div>
         </div>

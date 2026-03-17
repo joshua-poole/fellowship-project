@@ -14,7 +14,7 @@ import { EditableCell, setActiveCell } from "~/components/EditableCell";
 import { ColumnHeaderCell } from "~/components/ColumnHeaderCell";
 import { ColumnFieldForm } from "~/components/ColumnFieldForm";
 import { BulkCreateInput } from "~/components/BulkCreateInput";
-import { Plus } from "lucide-react";
+import { Icon } from "./icons/Icon";
 import { RowCheckbox } from "~/components/RowCheckbox";
 import {
   Popover,
@@ -113,8 +113,8 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               return next;
             });
           return (
-            <div className="w-8 h-8 flex items-center justify-center ml-3">
-              <span className={`select-none text-xs text-gray-500 tabular-nums ${isSelected ? "hidden" : "group-hover/row:hidden"}`}>
+            <div className="w-8 h-8 flex justify-center ml-3 pt-1.75">
+              <span className={`select-none text-gray-500 tabular-nums ${isSelected ? "hidden" : "group-hover/row:hidden"}`} style={{ fontSize: 11 }}>
                 {row.index + 1}
               </span>
               <div className={`${isSelected ? "flex" : "hidden group-hover/row:flex"}`}>
@@ -197,7 +197,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
           <Popover open={r.current.addColumnOpen} onOpenChange={setAddColumnOpen}>
             <PopoverTrigger asChild>
               <div className="flex items-center justify-center w-23.5 h-8 cursor-pointer hover:bg-gray-100">
-                <Plus className="h-4 w-4" />
+                <Icon name="Plus" className="h-4 w-4" />
               </div>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-64 p-3 flex flex-col gap-3">
@@ -272,7 +272,6 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
     <TableVirtualizerContext.Provider value={virtualizerContextValue}>
     <div className="flex flex-col justify-between h-full w-full bg-[#f6f8fc]">
       {/* Dynamic style for column selection — avoids React re-renders */}
-      {/* eslint-disable-next-line react/no-unknown-property */}
       <style ref={colSelectionStyleRef} />
       <div
         ref={tableContainerRef}
@@ -361,7 +360,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
         >
           <div className="shrink-0 border-r border-(--colors-border-default) h-full w-21">
             <div className="w-8 h-8 flex items-center justify-center ml-3">
-              <Plus className="h-4 w-4 text-black" strokeWidth={1.5} />
+              <Icon name="Plus" className="h-4 w-4 text-black" />
             </div>
           </div>
         </div>
@@ -371,13 +370,12 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
         )}
 
         {/* Filler to extend row number column border to bottom of container */}
-        <div className="flex flex-1 border-r w-21"/>
-        </div>
+        <div className="flex flex-1 border-r w-21"/></div>
       </div>
 
       {/* Summary bar */}
-      <div className="flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-7">
-        <span className="shrink-0 border-r border-(--colors-border-default) h-full w-21 flex items-center justify-center tabular-nums text-[10px]">
+      <div className="flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-8.5">
+        <span className="shrink-0 border-r border-(--colors-border-default) h-full w-21 flex items-center justify-center tabular-nums text-[11px] text-black pt-3px px-2 pb-0.5">
           {(() => { const count = search || filters?.length ? rows.length : Number(rowCount); return `${count.toLocaleString()} ${count === 1 ? "record" : "records"}`; })()}
         </span>
         <BulkCreateInput queryInput={queryInput} />

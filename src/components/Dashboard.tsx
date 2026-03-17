@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { DashboardCard } from "./DashboardCard";
-import { OmniIcon } from "./icons/Omni";
-import { Grid2x2Icon, Table, ArrowUp, ChevronDown, Menu, Grid2X2, Star, Ellipsis, Pencil, Copy, ArrowRight, Users, Palette, Trash2 } from "lucide-react";
+import { Icon } from "./icons/Icon";
 import { api } from "~/trpc/react";
 import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
@@ -77,17 +76,17 @@ export function Dashboard() {
     <div className="mx-12 mt-8">
       <h1 className="text-3xl font-bold pb-6 leading-tight">Home</h1>
       <div className="flex gap-4">
-        <DashboardCard title="Start with Omni" description="Use AI to build a custom app tailored to your workflow" icon={OmniIcon} color="rgb(221, 4, 168)"/>
-        <DashboardCard title="Start with templates" description="Select a template to get started and customize as you go." icon={Grid2x2Icon} color="purple"/>
-        <DashboardCard title="Quickly upload" description="Easily migrate your existing projects in just a few minutes." icon={ArrowUp} color="green"/>
-        <DashboardCard title="Build an app on your own" description="Start with a blank app and build your ideal workflow." icon={Table} color="blue"/>
+        <DashboardCard title="Start with Omni" description="Use AI to build a custom app tailored to your workflow" icon="Omni" color="rgb(221, 4, 168)"/>
+        <DashboardCard title="Start with templates" description="Select a template to get started and customize as you go." icon="GridFour" color="purple"/>
+        <DashboardCard title="Quickly upload" description="Easily migrate your existing projects in just a few minutes." icon="ArrowUp" color="green"/>
+        <DashboardCard title="Build an app on your own" description="Start with a blank app and build your ideal workflow." icon="Table" color="blue"/>
       </div>
 
       <div className="mt-5">
         <div className="flex items-center justify-between mb-4 text-gray-500">
           <div className="flex flex-row cursor-pointer hover:text-black">
             <p className="text-sm">Opened anytime</p>
-            <ChevronDown className="ml-1 h-4 w-4" strokeWidth={1.25}/>
+            <Icon name="ChevronDown" className="ml-1 h-4 w-4" />
           </div>
 
           <div className="flex flex-row gap-0">
@@ -95,13 +94,13 @@ export function Dashboard() {
               className={`p-1.5 rounded-full cursor-pointer transition-colors ${viewMode === "list" ? "bg-gray-200" : "hover:bg-gray-100"}`}
               onClick={() => setViewMode("list")}
             >
-              <Menu className="h-5 w-5" />
+              <Icon name="List" className="h-5 w-5" />
             </button>
             <button
               className={`p-1.5 rounded-full cursor-pointer transition-colors ${viewMode === "grid" ? "bg-gray-200" : "hover:bg-gray-100"}`}
               onClick={() => setViewMode("grid")}
             >
-              <Grid2X2 className="h-4 w-4" />
+              <Icon name="GridFour" className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -158,33 +157,33 @@ export function Dashboard() {
                     <div className="relative flex items-center">
                       <div className={`absolute -left-14 items-center gap-0.5 flex transition-opacity ${openMenuId === base.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                         <button className="p-1 rounded hover:bg-gray-300 text-gray-400" onClick={(e) => e.preventDefault()}>
-                          <Star className="h-3.5 w-3.5" />
+                          <Icon name="Star" className="h-3.5 w-3.5" />
                         </button>
                         <DropdownMenu onOpenChange={(open) => setOpenMenuId(open ? base.id : null)}>
                           <DropdownMenuTrigger asChild>
                             <button className="p-1 rounded hover:bg-gray-300 text-gray-400" onClick={(e) => e.preventDefault()}>
-                              <Ellipsis className="h-3.5 w-3.5" />
+                              <Icon name="DotsThree" className="h-3.5 w-3.5" />
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent side="bottom" align="start" className="w-56">
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setRenamingId(base.id); }}>
-                              <Pencil className="h-4 w-4" />
+                              <Icon name="Pencil" className="h-4 w-4" />
                               Rename
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                              <Copy className="h-4 w-4" />
+                              <Icon name="Copy" className="h-4 w-4" />
                               Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                              <ArrowRight className="h-4 w-4" />
+                              <Icon name="ArrowRight" className="h-4 w-4" />
                               Move
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                              <Users className="h-4 w-4" />
+                              <Icon name="Users" className="h-4 w-4" />
                               Go to workspace
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                              <Palette className="h-4 w-4" />
+                              <Icon name="Palette" className="h-4 w-4" />
                               Customize appearance
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -197,7 +196,7 @@ export function Dashboard() {
                                 }
                               }}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Icon name="Trash" className="h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>

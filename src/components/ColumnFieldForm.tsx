@@ -8,11 +8,11 @@ import {
   SelectContent,
   SelectItem,
 } from "~/components/ui/select";
-import { ALargeSmall, Hash } from "lucide-react";
+import { Icon } from "./icons/Icon";
 
 const COLUMN_TYPES = [
-  { value: "TEXT", label: "Text", icon: ALargeSmall },
-  { value: "NUMBER", label: "Number", icon: Hash },
+  { value: "TEXT", label: "Text", icon: "TextAlt" },
+  { value: "NUMBER", label: "Number", icon: "HashStraight" },
 ] as const;
 
 export type ColumnTypeValue = typeof COLUMN_TYPES[number]["value"];
@@ -56,7 +56,7 @@ export function ColumnFieldForm({
         <SelectContent>
           {COLUMN_TYPES.map((ct) => (
             <SelectItem key={ct.value} value={ct.value}>
-              <ct.icon className="h-3.5 w-3.5 inline-block mr-2 text-gray-500" />
+              <Icon name={ct.icon} className="h-3.5 w-3.5 inline-block mr-2 text-gray-500" />
               {ct.label}
             </SelectItem>
           ))}

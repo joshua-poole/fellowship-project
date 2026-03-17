@@ -1,16 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Search,
-  Settings,
-  Plus,
-  MoreHorizontal,
-  Pencil,
-  Copy,
-  Star,
-  Trash2,
-} from "lucide-react";
+import { Icon } from "./icons/Icon";
 import { GridFeatureIcon } from "./icons";
 import {
   DropdownMenu,
@@ -42,20 +33,20 @@ export function ViewsSidebar({
           onClick={onCreateView}
           disabled={isCreating}
         >
-          <Plus className="h-4 w-4 shrink-0 flex-none mr-2" />
+          <Icon name="Plus" className="h-4 w-4 shrink-0 flex-none mr-2" />
           <span className="truncate">Create new...</span>
         </button>
 
         <div className="flex-none mt-1">
           <div className="relative focus-within:rounded-md focus-within:shadow-[inset_0_0_0_2px_rgb(22,110,225)]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+            <Icon name="MagnifyingGlass" className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
             <input
               type="text"
               placeholder="Find a view"
               className="h-8 py-1.5 pl-9 pr-7.5 w-full text-sm outline-none bg-transparent placeholder:text-gray-400 focus:border-red-600"
             />
             <div className="h-4 w-7 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2">
-              <Settings className="h-4 w-4 text-black cursor-pointer transform rotate-30" strokeWidth={1.5} />
+              <Icon name="Gear" className="h-4 w-4 text-black cursor-pointer transform rotate-30" />
             </div>
           </div>
         </div>
@@ -102,21 +93,21 @@ export function ViewsSidebar({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="invisible group-hover:visible flex items-center justify-center h-5 w-5 rounded shrink-0 hover:bg-black/10 cursor-pointer">
-                    <MoreHorizontal className="h-3.5 w-3.5 text-gray-500" />
+                    <Icon name="DotsThree" className="h-3.5 w-3.5 text-gray-500" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="bottom" align="start" className="w-56">
                   <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                    <Star className="h-4 w-4" />
+                    <Icon name="Star" className="h-4 w-4" />
                     Add to &apos;My favorites&apos;
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => setRenamingViewId(v.id)}>
-                    <Pencil className="h-4 w-4" />
+                    <Icon name="Pencil" className="h-4 w-4" />
                     Rename view
                   </DropdownMenuItem>
                   <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
-                    <Copy className="h-4 w-4" />
+                    <Icon name="Copy" className="h-4 w-4" />
                     Duplicate view
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -124,7 +115,7 @@ export function ViewsSidebar({
                     disabled={views.length <= 1}
                     onClick={() => onDeleteView(v.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Icon name="Trash" className="h-4 w-4" />
                     Delete view
                   </DropdownMenuItem>
                 </DropdownMenuContent>

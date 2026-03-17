@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import {
-  ChevronDown,
-  MoreHorizontal,
-  Pencil,
-  Star,
-  Trash2,
-} from "lucide-react";
+import { Icon } from "./icons/Icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,22 +38,22 @@ export function BasePopoverPanel({ base, selectedColor, onRename, onColorChange,
           }}
         />
         <button className="p-1 rounded hover:bg-gray-100">
-          <Star className="h-5 w-5 text-gray-400" />
+          <Icon name="Star" className="h-5 w-5 text-gray-400" />
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="p-1 rounded hover:bg-gray-100">
-              <MoreHorizontal className="h-5 w-5 text-gray-400" />
+              <Icon name="DotsThree" className="h-5 w-5 text-gray-400" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="bottom" align="end" className="w-48">
             <DropdownMenuItem onClick={() => inputRef.current?.focus()}>
-              <Pencil className="h-4 w-4" />
+              <Icon name="Pencil" className="h-4 w-4" />
               Rename
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onDelete}>
-              <Trash2 className="h-4 w-4" />
+              <Icon name="Trash" className="h-4 w-4" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -73,7 +67,7 @@ export function BasePopoverPanel({ base, selectedColor, onRename, onColorChange,
           className="flex items-center gap-2 w-full cursor-pointer"
           onClick={() => setAppearanceOpen(!appearanceOpen)}
         >
-          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${appearanceOpen ? "" : "-rotate-90"}`} />
+          <Icon name="ChevronDown" className={`h-4 w-4 text-gray-500 transition-transform ${appearanceOpen ? "" : "-rotate-90"}`} />
           <span className="text-base font-bold">Appearance</span>
         </button>
 
@@ -108,7 +102,7 @@ export function BasePopoverPanel({ base, selectedColor, onRename, onColorChange,
           className="flex items-center gap-2 w-full cursor-pointer"
           onClick={() => setGuideOpen(!guideOpen)}
         >
-          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${guideOpen ? "" : "-rotate-90"}`} />
+          <Icon name="ChevronDown" className={`h-4 w-4 text-gray-500 transition-transform ${guideOpen ? "" : "-rotate-90"}`} />
           <span className="text-base font-bold">Base guide</span>
         </button>
 

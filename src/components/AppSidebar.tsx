@@ -1,21 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Bell,
-  CircleQuestionMark,
-  User,
-  Users,
-  Languages,
-  Palette,
-  Mail,
-  CircleStar,
-  Wrench,
-  Trash2,
-  LogOut,
-  Link as LinkIcon,
-} from "lucide-react";
+import { Icon } from "./icons/Icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,8 +11,8 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { OmniBaseView } from "./icons/OmniBaseView";
 import { LogoIcon } from "./Logo";
-import { Bell as BellIcon } from "lucide-react";
 import type { AppSidebarProps } from "~/types/Props";
+import { OmniBaseViewNew } from './icons/OmniBaseViewNew';
 
 const AVATAR_COLORS = [
   "bg-teal-300", "bg-rose-300", "bg-violet-300", "bg-sky-300",
@@ -52,21 +38,27 @@ export function AppSidebar({ session, onSignOut }: AppSidebarProps) {
           <span className="group-hover:hidden [&_svg]:h-6 [&_svg]:w-6 [&_path]:fill-black! flex flex-none">
             <LogoIcon />
           </span>
-          <ArrowLeft className="h-5 w-5 hidden group-hover:block text-gray-600" />
+          <Icon name="ArrowLeft" className="h-5 w-5 hidden group-hover:block text-gray-600" />
         </div>
         <div className="flex items-center h-7 justify-center px-2 rounded-md cursor-pointer hover:bg-gray-100">
           <OmniBaseView />
+          {/* <OmniBaseViewNew /> */}
         </div>
       </div>
 
       <div className="flex flex-auto flex-col items-center justify-end gap-3">
-        <SidebarIcon icon={CircleQuestionMark} />
-        <SidebarIcon icon={BellIcon} />
+        <div className="w-7 h-7">
+
+          <SidebarIcon icon="Question" />
+        </div>
+        <SidebarIcon icon="Bell" />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="-ml-2">
-              <div className={`flex-none flex h-7 w-7 ml-2 items-center justify-center rounded-full ${hashColor(session?.user?.id ?? "", AVATAR_COLORS)} cursor-pointer select-none`}>
-                <span className="text-sm font-medium text-black">{session?.user?.name?.charAt(0).toUpperCase()}</span>
+              <div className="flex items-center">
+                <div className={`flex-none flex h-7 w-7 ml-2 items-center justify-center rounded-full border border-white ${hashColor(session?.user?.id ?? "", AVATAR_COLORS)} cursor-pointer select-none`}>
+                  <span className="w-6.5 h-6.5 text-sm font-medium text-black text-center leading-6.5">{session?.user?.name?.charAt(0).toUpperCase()}</span>
+                </div>
               </div>
             </div>
           </DropdownMenuTrigger>
@@ -76,21 +68,21 @@ export function AppSidebar({ session, onSignOut }: AppSidebarProps) {
               <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
             </div>
             <DropdownMenuSeparator className="my-3" />
-            <DropdownMenuItem className="cursor-pointer"><User />Account</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer"><Users />Manage groups</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer"><Bell />Notification preferences</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer"><Languages />Language preferences</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer"><Palette />Appearance</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="User" className="h-4 w-4" />Account</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="Users" className="h-4 w-4" />Manage groups</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="Bell" className="h-4 w-4" />Notification preferences</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="Translate" className="h-4 w-4" />Language preferences</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer"><Icon name="Palette" className="h-4 w-4" />Appearance</DropdownMenuItem>
             <DropdownMenuSeparator className="my-3" />
-            <DropdownMenuItem className="cursor-pointer text-sm"><Mail />Contact sales</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><CircleStar />Upgrade</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Mail />Tell a friend</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="EnvelopeSimple" className="h-4 w-4" />Contact sales</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Star" className="h-4 w-4" />Upgrade</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="EnvelopeSimple" className="h-4 w-4" />Tell a friend</DropdownMenuItem>
             <DropdownMenuSeparator className="my-3" />
-            <DropdownMenuItem className="cursor-pointer text-sm"><LinkIcon />Integrations</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm"><Wrench />Builder hub</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Link" className="h-4 w-4" />Integrations</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Wrench" className="h-4 w-4" />Builder hub</DropdownMenuItem>
             <DropdownMenuSeparator className="my-3" />
-            <DropdownMenuItem className="cursor-pointer text-sm"><Trash2 />Trash</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-sm" onClick={onSignOut}><LogOut />Log out</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm"><Icon name="Trash" className="h-4 w-4" />Trash</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-sm" onClick={onSignOut}><Icon name="SignOut" className="h-4 w-4" />Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -98,10 +90,10 @@ export function AppSidebar({ session, onSignOut }: AppSidebarProps) {
   );
 }
 
-function SidebarIcon({ icon: Icon }: { icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }) {
+function SidebarIcon({ icon }: { icon: string }) {
   return (
     <div className="flex w-7 h-7 items-center rounded-full justify-center flex-reverse cursor-pointer hover:bg-gray-100 transition-colors">
-      <Icon className="h-4 w-4 text-gray-600" strokeWidth={1.5} />
+      <Icon name={icon} className="h-4 w-4 text-gray-600" />
     </div>
   );
 }
