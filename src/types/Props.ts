@@ -1,3 +1,4 @@
+import type React from "react";
 import type z from "zod";
 import type { RowGetByTableInputSchema } from "./schemas/row";
 
@@ -90,6 +91,24 @@ export interface ViewsSidebarProps {
 }
 
 export type RowData = { id: string; order: number; values: Record<string, string | number> };
+
+export interface VirtualItem {
+  index: number;
+  start: number;
+  size: number;
+}
+
+export interface VirtualizerReturn {
+  getVirtualItems: () => VirtualItem[];
+  getTotalSize: () => number;
+  scrollToIndex: (index: number, opts?: { align?: "auto" | "center" | "start" | "end" }) => void;
+  /** If true, items are positioned relative to firstItemStart and a wrapper transform is used */
+  needsWrapperTransform: boolean;
+  /** Ref for the row wrapper div — scaled modes set its transform via DOM */
+  rowContainerRef: React.RefObject<HTMLDivElement | null>;
+  /** Virtual start of the first rendered item */
+  firstItemStart: number;
+}
 
 export type QueryInput = { tableId: string; limit?: number; [key: string]: unknown };
 

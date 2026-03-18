@@ -27,7 +27,7 @@ import { useRowMutations } from "~/hooks/useRowMutations";
 import { useColumnMutations } from "~/hooks/useColumnMutations";
 import type { RowData, TableQueryInput, TableVirtualizerContextValue, VirtualizedTableProps } from "~/types/Props";
 import { ROW_HEIGHT, PAGE_SIZE } from "~/lib/constants";
-import { useTanstackVirtualizer } from "~/hooks/useTanstackVirtualizer";
+import { useRowVirtualizer } from "~/hooks/useRowVirtualizer";
 
 const TableVirtualizerContext = createContext<TableVirtualizerContextValue | null>(null);
 
@@ -243,12 +243,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
     .filter((col) => col.id !== "_addCol")
     .reduce((sum, col) => sum + col.getSize(), 0);
 
-  const rowVirtualizer = useTanstackVirtualizer({
-    count: totalCount,
-    estimateSize: () => ROW_HEIGHT,
-    getScrollElement: () => tableContainerRef.current,
-    overscan: 10,
-  });
+  const rowVirtualizer = useRowVirtualizer({ count: totalCount, getScrollElement: () => tableContainerRef.current, overscan: 10 });
 
   scrollToRowRef.current = (index: number) =>
     rowVirtualizer.scrollToIndex(index, { align: "center" });
@@ -283,154 +278,166 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
       <style ref={colSelectionStyleRef} />
       <div
         ref={tableContainerRef}
-        onScroll={() => { rowVirtualizer._onScroll(); handleScroll(); }}
+        onScroll={handleScroll}
         className="min-w-0 overflow-auto relative"
         style={{ scrollPaddingTop: ROW_HEIGHT, height: "calc(100% - 34px)" }}
       >
-        {isFetching && (
-          <div className="sticky top-1.5 z-10 flex justify-end pointer-events-none" style={{ height: 0 }}>
-            <div className="mr-4 flex items-center gap-2 bg-white border border-gray-200 rounded-full px-5 py-3 shadow-sm whitespace-nowrap">
-              <div className="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-gray-300 border-t-blue-500 animate-spin" />
-              <span className="text-xs text-gray-500">Loading rows…</span>
+          {isFetching && (
+            <div className="sticky top-1.5 z-10 flex justify-end pointer-events-none" style={{ height: 0 }}>
+              <div className="mr-4 flex items-center gap-2 bg-white border border-gray-200 rounded-full px-5 py-3 shadow-sm whitespace-nowrap">
+                <div className="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-gray-300 border-t-blue-500 animate-spin" />
+                <span className="text-xs text-gray-500">Loading rows…</span>
+              </div>
             </div>
+          )}
+          {/* Header — sticky so it stays visible while rows scroll */}
+          <div className="sticky top-0 z-2 bg-[#fbfcfe] text-sm shrink-0" style={{ display: "flex", width: "100%" }}>
+            {table.getHeaderGroups().map((headerGroup) =>
+              headerGroup.headers.map((header) => {
+                const colId = header.column.id;
+                const allSelected = totalCount > 0 && selectedRows.size === totalCount;
+                const isAddCol = colId === "_addCol";
+                const isSpecialCol = colId === "_rowNum" || isAddCol;
+                const headerBg = isSpecialCol ? undefined : allSelected ? "#e7edf6" : filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
+                return (
+                  <div
+                    key={header.id}
+                    {...(!isSpecialCol ? { "data-col": colId } : {})}
+                    className={`${isAddCol ? "" : "border-r"} ${colId === "_rowNum" ? "border-r-[#ccc]" : ""} border-b overflow-hidden shrink-0 p-0 ${allSelected || colId === "_rowNum" ? "" : "hover:bg-gray-50"} bg-white ${colId === "_rowNum" ? "" : "pt-px"}`}
+                    style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT, ...(colId !== "_rowNum" && { borderRightColor: "var(--colors-border-default)" }), borderBottomColor: "hsl(0, 0%, 82%)", ...(headerBg && { backgroundColor: headerBg }) }}
+                  >
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </div>
+                );
+              })
+            )}
           </div>
-        )}
-        {/* Header */}
-        <div className="sticky top-0 z-1 bg-[#fbfcfe] text-sm" style={{ display: "flex", width: "100%" }}>
-          {table.getHeaderGroups().map((headerGroup) =>
-            headerGroup.headers.map((header) => {
-              const colId = header.column.id;
-              const allSelected = totalCount > 0 && selectedRows.size === totalCount;
-              const isAddCol = colId === "_addCol";
-              const isSpecialCol = colId === "_rowNum" || isAddCol;
-              const headerBg = isSpecialCol ? undefined : allSelected ? "#e7edf6" : filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
+
+          {/* Virtualized rows */}
+          <div
+            className="relative w-full bg-white"
+            style={{ height: `${rowVirtualizer.getTotalSize()}px`, overflow: "hidden", contain: "layout paint" }}
+            onClick={clearColumnSelection}
+          >
+            {(() => {
+              const virtualItems = rowVirtualizer.getVirtualItems();
+              const firstStart = rowVirtualizer.firstItemStart;
+              const useTransform = rowVirtualizer.needsWrapperTransform;
+              return (
+            <div
+              ref={useTransform ? rowVirtualizer.rowContainerRef : undefined}
+              className="absolute top-0 left-0 w-full"
+            >
+            {virtualItems.map((virtualRow) => {
+              const rowData = getRow(virtualRow.index);
+              const isPlaceholder = !rowData;
+              const isSelected = rowData ? selectedRows.has(rowData.id) : false;
+              const rowY = useTransform
+                ? virtualRow.start - firstStart
+                : virtualRow.start;
+
               return (
                 <div
-                  key={header.id}
-                  {...(!isSpecialCol ? { "data-col": colId } : {})}
-                  className={`${isAddCol ? "" : "border-r"} ${colId === "_rowNum" ? "border-r-[#ccc]" : ""} border-b overflow-hidden shrink-0 p-0 ${allSelected || colId === "_rowNum" ? "" : "hover:bg-gray-50"} bg-white ${colId === "_rowNum" ? "" : "pt-px"}`}
-                  style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT, ...(colId !== "_rowNum" && { borderRightColor: "var(--colors-border-default)" }), borderBottomColor: "hsl(0, 0%, 82%)", ...(headerBg && { backgroundColor: headerBg }) }}
+                  data-index={virtualRow.index}
+                  key={virtualRow.index}
+                  className={`absolute top-0 left-0 w-full group/row ${isSelected ? "bg-[#fbfcfe]" : "hover:bg-gray-50/80"} bg-[#f6f8fc] focus-within:z-10 text-sm`}
+                  style={{
+                    display: "flex",
+                    transform: `translateY(${rowY}px)`,
+                    height: ROW_HEIGHT,
+                  }}
                 >
-                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Virtualized rows */}
-        <div
-          className="relative w-full bg-white"
-          style={{ height: `${rowVirtualizer.getTotalSize()}px`, overflow: "hidden", contain: "layout paint" }}
-          onClick={clearColumnSelection}
-        >
-          <div ref={rowVirtualizer.rowContainerRef} className="absolute top-0 left-0 w-full">
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const rowData = getRow(virtualRow.index);
-            const isPlaceholder = !rowData;
-            const isSelected = rowData ? selectedRows.has(rowData.id) : false;
-
-            return (
-              <div
-                data-index={virtualRow.index}
-                ref={(node) => rowVirtualizer.measureElement(node)}
-                key={virtualRow.index}
-                className={`absolute top-0 left-0 w-full group/row ${isSelected ? "bg-[#fbfcfe]" : "hover:bg-gray-50/80"} bg-[#f6f8fc] focus-within:z-10 text-sm`}
-                style={{
-                  display: "flex",
-                  transform: `translateY(${virtualRow.start}px)`,
-                  height: ROW_HEIGHT,
-                }}
-              >
-                {/* Row number / checkbox cell */}
-                <div
-                  data-col="_rowNum"
-                  className="border-b border-r border-(--colors-border-default) focus-within:border-transparent shrink-0 p-0 overflow-hidden bg-white group-hover/row:bg-[#f8f8f8] group-focus-within/row:bg-[#f8f8f8] focus-within:bg-white relative"
-                  style={{ display: "flex", width: rowNumWidth, height: ROW_HEIGHT, borderRightColor: "#ccc" }}
-                >
-                  <div className="w-8 h-8 flex justify-center ml-3 pt-1.75">
-                    <span className={`select-none text-gray-500 tabular-nums font-normal ${isSelected ? "hidden" : "group-hover/row:hidden"}`} style={{ fontSize: 12, fontWeight: 400 }}>
-                      {virtualRow.index + 1}
-                    </span>
-                    <div className={`${isSelected ? "flex" : "hidden group-hover/row:flex"}`}>
-                      <RowCheckbox
-                        checked={isSelected}
-                        onClick={() => {
-                          if (!rowData) return;
-                          setSelectedRows((prev) => {
-                            const next = new Set(prev);
-                            if (isSelected) next.delete(rowData.id);
-                            else next.add(rowData.id);
-                            return next;
-                          });
-                        }}
-                      />
+                  {/* Row number / checkbox cell */}
+                  <div
+                    data-col="_rowNum"
+                    className="border-b border-r border-(--colors-border-default) focus-within:border-transparent shrink-0 p-0 overflow-hidden bg-white group-hover/row:bg-[#f8f8f8] group-focus-within/row:bg-[#f8f8f8] focus-within:bg-white relative"
+                    style={{ display: "flex", width: rowNumWidth, height: ROW_HEIGHT, borderRightColor: "#ccc" }}
+                  >
+                    <div className="w-8 h-8 flex justify-center ml-3 pt-1.75">
+                      <span className={`select-none text-gray-500 tabular-nums font-normal ${isSelected ? "hidden" : "group-hover/row:hidden"}`} style={{ fontSize: 12, fontWeight: 400 }}>
+                        {virtualRow.index + 1}
+                      </span>
+                      <div className={`${isSelected ? "flex" : "hidden group-hover/row:flex"}`}>
+                        <RowCheckbox
+                          checked={isSelected}
+                          onClick={() => {
+                            if (!rowData) return;
+                            setSelectedRows((prev) => {
+                              const next = new Set(prev);
+                              if (isSelected) next.delete(rowData.id);
+                              else next.add(rowData.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Data cells */}
+                  {columns.map((col, colIdx) => {
+                    const isFirstCol = colIdx === 0;
+                    const isLastCol = colIdx === columns.length - 1;
+                    const colSize = colSizeMap.get(col.id) ?? (col.type === "NUMBER" ? 183 : 180);
+                    const { searchMatches: matches, searchMatchIndex: matchIdx, search: s, filteredColumnIds: fIds, sortedColumnIds: sIds, clearColumnSelection: clearColSel } = renderRef.current;
+                    const activeMatch = matches.length > 0 && matchIdx != null ? matches[matchIdx % matches.length] : null;
+                    const isActive = activeMatch?.rowIndex === virtualRow.index && activeMatch?.columnId === col.id;
+
+                    return (
+                      <div
+                        key={col.id}
+                        data-col={col.id}
+                        className={`border-b border-r border-(--colors-border-default) focus-within:border-transparent shrink-0 flex items-center px-1.5 ${isSelected ? "bg-[#f1f6ff]" : "bg-white group-hover/row:bg-[#f8f8f8] group-focus-within/row:bg-[#f8f8f8]"} focus-within:bg-white relative`}
+                        style={{ display: "flex", width: colSize, height: ROW_HEIGHT }}
+                        {...(rowData ? { onContextMenu: (e: React.MouseEvent) => handleRowContextMenu(e, rowData.id) } : {})}
+                      >
+                        {isPlaceholder ? null : (
+                          <EditableCell
+                            rowId={rowData.id}
+                            columnId={col.id}
+                            columnType={col.type}
+                            initialValue={String(rowData.values[col.id] ?? "")}
+                            isFirstCol={isFirstCol}
+                            isLastCol={isLastCol}
+                            isFirstRow={virtualRow.index === 0}
+                            search={s}
+                            isActiveSearchMatch={isActive}
+                            isFiltered={fIds.has(col.id)}
+                            isSorted={sIds.has(col.id)}
+                            rowIndex={virtualRow.index}
+                            rowCount={totalCount}
+                            onSaveCell={onSaveCell}
+                            onNavigateToCell={navigateToCell}
+                            onClearColumnSelection={clearColSel}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-
-                {/* Data cells */}
-                {columns.map((col, colIdx) => {
-                  const isFirstCol = colIdx === 0;
-                  const isLastCol = colIdx === columns.length - 1;
-                  const colSize = colSizeMap.get(col.id) ?? (col.type === "NUMBER" ? 183 : 180);
-                  const { searchMatches: matches, searchMatchIndex: matchIdx, search: s, filteredColumnIds: fIds, sortedColumnIds: sIds, clearColumnSelection: clearColSel } = renderRef.current;
-                  const activeMatch = matches.length > 0 && matchIdx != null ? matches[matchIdx % matches.length] : null;
-                  const isActive = activeMatch?.rowIndex === virtualRow.index && activeMatch?.columnId === col.id;
-
-                  return (
-                    <div
-                      key={col.id}
-                      data-col={col.id}
-                      className={`border-b border-r border-(--colors-border-default) focus-within:border-transparent shrink-0 flex items-center px-1.5 ${isSelected ? "bg-[#f1f6ff]" : "bg-white group-hover/row:bg-[#f8f8f8] group-focus-within/row:bg-[#f8f8f8]"} focus-within:bg-white relative`}
-                      style={{ display: "flex", width: colSize, height: ROW_HEIGHT }}
-                      {...(rowData ? { onContextMenu: (e: React.MouseEvent) => handleRowContextMenu(e, rowData.id) } : {})}
-                    >
-                      {isPlaceholder ? null : (
-                        <EditableCell
-                          rowId={rowData.id}
-                          columnId={col.id}
-                          columnType={col.type}
-                          initialValue={String(rowData.values[col.id] ?? "")}
-                          isFirstCol={isFirstCol}
-                          isLastCol={isLastCol}
-                          isFirstRow={virtualRow.index === 0}
-                          search={s}
-                          isActiveSearchMatch={isActive}
-                          isFiltered={fIds.has(col.id)}
-                          isSorted={sIds.has(col.id)}
-                          rowIndex={virtualRow.index}
-                          rowCount={totalCount}
-                          onSaveCell={onSaveCell}
-                          onNavigateToCell={navigateToCell}
-                          onClearColumnSelection={clearColSel}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+              );
+            })}
+            </div>
+              );
+            })()}
           </div>
-        </div>
 
-        {/* add row */}
-        <div
-          className="flex items-center border-b border-r border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors bg-white"
-          style={{ height: 31, width: dataColumnsWidth, flexShrink: 0 }}
-          onClick={() => createRow.mutate({ tableId })}
-        >
-          <div className="shrink-0 border-r border-[#ccc] h-full w-21">
-            <div className="w-8 h-8 flex items-center justify-center ml-3">
-              <Icon name="Plus" className="h-4 w-4 -translate-y-px" style={{ color: "#545454" }} />
+          {/* add row */}
+          <div
+            className="flex items-center border-b border-r border-(--colors-border-default) hover:bg-gray-50 cursor-pointer transition-colors bg-white"
+            style={{ height: 31, width: dataColumnsWidth, flexShrink: 0 }}
+            onClick={() => createRow.mutate({ tableId })}
+          >
+            <div className="shrink-0 border-r border-[#ccc] h-full w-21">
+              <div className="w-8 h-8 flex items-center justify-center ml-3">
+                <Icon name="Plus" className="h-4 w-4 -translate-y-px" style={{ color: "#545454" }} />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Filler to extend row number column border to bottom of container */}
-        <div className="flex flex-1 border-r w-21 border-[#ccc]"/>
-      </div>
+          {/* Filler to extend row number column border to bottom of container */}
+          <div className="flex flex-1 border-r w-21 border-[#ccc]"/>
+        </div>
 
       {/* Summary bar */}
       <div className="relative flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-8.5">
