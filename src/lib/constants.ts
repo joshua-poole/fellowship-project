@@ -1,4 +1,8 @@
 export const ROW_HEIGHT = 32;
 
-/** Progressive page size limits — each page fetches more rows as the user scrolls deeper. */
-export const PAGE_LIMITS = [10000, 90000, 100000] as const;
+/** Number of rows fetched per page in the windowed loader. */
+export const PAGE_SIZE = 1000;
+
+/** Number of extra pages to prefetch above/below the visible range. */
+export const BUFFER_PAGES = 2;
+

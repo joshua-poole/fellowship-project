@@ -9,11 +9,13 @@ const CellValuesSchema = z.record(z.string(), z.union([z.string(), z.number()]))
 export const RowGetByTableInputSchema = RowModelSchema.pick({
   tableId: true,
 }).extend({
+  /** Row offset for random-access jumps (used when no cursor is available). */
+  offset: z.number().int().min(0).default(0),
+  limit: z.number().int().min(1).max(5000).default(500),
+  /** Cursor for efficient sequential loading from a known position. */
   cursor: z.object({
     order: z.number().int(),
-    limit: z.number().int().min(1).max(100000),
   }).optional(),
-  limit: z.number().int().min(1).max(100000).default(5000),
   search: z.string().optional(),
   sorts: z
     .array(
@@ -40,8 +42,6 @@ export const RowGetByTableInputSchema = RowModelSchema.pick({
       }),
     )
     .optional(),
-  // tRPC infinite queries inject a `direction` field automatically
-  direction: z.enum(["forward", "backward"]).optional(),
 });
 
 export const RowGetByTableOutputSchema = z.object({
@@ -53,10 +53,7 @@ export const RowGetByTableOutputSchema = z.object({
       values: CellValuesSchema,
     }),
   ),
-  nextCursor: z.object({
-    order: z.number().int(),
-    limit: z.number().int(),
-  }).optional(),
+  totalCount: z.number().int(),
 });
 
 export const RowCreateInputSchema = RowModelSchema.pick({

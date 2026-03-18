@@ -8,7 +8,6 @@ import {
   createColumnHelper,
   useReactTable,
 } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { Skeleton } from "~/components/ui/skeleton";
 import { EditableCell, setActiveCell } from "~/components/EditableCell";
 import { ColumnHeaderCell } from "~/components/ColumnHeaderCell";
@@ -21,12 +20,14 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "~/components/ui/popover";
-import { useInfiniteRows } from "~/hooks/useInfiniteRows";
+import { api } from "~/trpc/react";
+import { useWindowedRows } from "~/hooks/useWindowedRows";
 import { useSearchMatches } from "~/hooks/useSearchMatches";
 import { useRowMutations } from "~/hooks/useRowMutations";
 import { useColumnMutations } from "~/hooks/useColumnMutations";
 import type { RowData, TableQueryInput, TableVirtualizerContextValue, VirtualizedTableProps } from "~/types/Props";
-import { ROW_HEIGHT, PAGE_LIMITS } from "~/lib/constants";
+import { ROW_HEIGHT, PAGE_SIZE } from "~/lib/constants";
+import { useTanstackVirtualizer } from "~/hooks/useTanstackVirtualizer";
 
 const TableVirtualizerContext = createContext<TableVirtualizerContextValue | null>(null);
 
@@ -47,9 +48,9 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
     setContextMenu({ x: e.clientX, y: e.clientY, rowId });
   }, []);
 
-  // Build query input with view config
+  // Build query input with view config (base input without offset/cursor — the hook adds those)
   const queryInput = useMemo<TableQueryInput>(() => {
-    const input: TableQueryInput = { tableId, limit: PAGE_LIMITS[0] };
+    const input: TableQueryInput = { tableId, limit: PAGE_SIZE, offset: 0 };
     if (search) input.search = search;
     if (filters?.length) {
       input.filters = filters.map((f) => ({
@@ -65,10 +66,22 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
   }, [tableId, search, filters, sorts]);
 
   // Extracted hooks
-  const { rows, isLoading, isFetchingNextPage, tableContainerRef, fetchMoreOnBottomReached } = useInfiniteRows(queryInput);
-  const { searchMatches, scrollToRowRef } = useSearchMatches(search, rows, columns, searchMatchIndex, onSearchMatchCountChange);
-  const { createRow, deleteRow } = useRowMutations(tableId, queryInput);
+  const { getRow, totalCount, isLoading, isFetching, tableContainerRef, handleScroll, visibleFirst, visibleLast } = useWindowedRows(queryInput, rowCount);
+  const { searchMatches, scrollToRowRef } = useSearchMatches(search, getRow, totalCount, columns, visibleFirst, visibleLast, searchMatchIndex, onSearchMatchCountChange);
+  const { createRow, deleteRow } = useRowMutations(tableId);
   const columnMutations = useColumnMutations(tableId);
+
+  // Single mutation instance for all cells (instead of one per EditableCell)
+  const utils = api.useUtils();
+  const updateCell = api.row.updateCell.useMutation({
+    onSettled: () => { void utils.row.getByTable.invalidate({ tableId }); },
+  });
+  const onSaveCell = useCallback(
+    (rowId: string, columnId: string, value: string | number) => {
+      updateCell.mutate({ rowId, columnId, value });
+    },
+    [updateCell],
+  );
 
   // Compute sets of columns with active filters/sorts for cell coloring
   const filteredColumnIds = useMemo(() => new Set(filters?.map((f) => f.columnId) ?? []), [filters]);
@@ -83,8 +96,8 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
     selectedColumnRef.current = null;
     if (colSelectionStyleRef.current) colSelectionStyleRef.current.textContent = "";
   }, []);
-  const renderRef = useRef({ selectedRows, rows, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn, clearColumnSelection });
-  renderRef.current = { selectedRows, rows, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn, clearColumnSelection };
+  const renderRef = useRef({ selectedRows, getRow, totalCount, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn, clearColumnSelection });
+  renderRef.current = { selectedRows, getRow, totalCount, columnMutations, editingColumnId, addColumnOpen, search, searchMatches, searchMatchIndex, filteredColumnIds, sortedColumnIds, onAddFilter, onAddSort, onHideColumn, clearColumnSelection };
 
   const tableColumns = useMemo<ColumnDef<RowData, unknown>[]>(() => {
     const r = renderRef;
@@ -92,13 +105,25 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
       columnHelper.display({
         id: "_rowNum",
         header: () => {
-          const { rows: currentRows, selectedRows: sel } = r.current;
-          const allSelected = currentRows.length > 0 && sel.size === currentRows.length;
+          const { totalCount: tc, selectedRows: sel } = r.current;
+          const allSelected = tc > 0 && sel.size === tc;
           return (
             <div className="w-11 h-8 flex items-center justify-center pl-3">
               <RowCheckbox
                 checked={allSelected}
-                onClick={() => setSelectedRows(allSelected ? new Set() : new Set(currentRows.map((row) => row.id)))}
+                onClick={() => {
+                  if (allSelected) {
+                    setSelectedRows(new Set());
+                  } else {
+                    // Select all loaded rows (can't select unloaded ones)
+                    const ids = new Set<string>();
+                    for (let i = 0; i < tc; i++) {
+                      const row = r.current.getRow(i);
+                      if (row) ids.add(row.id);
+                    }
+                    setSelectedRows(ids);
+                  }
+                }}
               />
             </div>
           );
@@ -130,7 +155,6 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
     for (let i = 0; i < columns.length; i++) {
       const col = columns[i]!;
       const isFirstCol = i === 0;
-      const isLastCol = i === columns.length - 1;
       cols.push(
         columnHelper.accessor((row) => row.values[col.id] ?? "", {
           id: col.id,
@@ -160,30 +184,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
               }}
             />
           ),
-          cell: (info) => {
-            const { searchMatches: matches, searchMatchIndex: matchIdx, search: s, filteredColumnIds: fIds, sortedColumnIds: sIds } = r.current;
-            const activeMatch = matches.length > 0 && matchIdx != null
-              ? matches[matchIdx % matches.length]
-              : null;
-            const isActive = activeMatch?.rowIndex === info.row.index && activeMatch?.columnId === col.id;
-            return (
-              <EditableCell
-                tableId={tableId}
-                rowId={info.row.original.id}
-                columnId={col.id}
-                columnType={col.type}
-                initialValue={String(info.getValue())}
-                isFirstCol={isFirstCol}
-                isLastCol={isLastCol}
-                isFirstRow={info.row.index === 0}
-                search={s}
-                isActiveSearchMatch={isActive}
-                isFiltered={fIds.has(col.id)}
-                isSorted={sIds.has(col.id)}
-                onClearColumnSelection={r.current.clearColumnSelection}
-              />
-            );
-          },
+          cell: () => null, // Rows are rendered directly via virtualizer, not useReactTable
           size: col.type === "NUMBER" ? 183 : 180,
         }) as ColumnDef<RowData, unknown>,
       );
@@ -196,7 +197,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
         header: () => (
           <Popover open={r.current.addColumnOpen} onOpenChange={setAddColumnOpen}>
             <PopoverTrigger asChild>
-              <div className="flex justify-center w-[93px] pt-[7px] h-8 cursor-pointer hover:bg-gray-100 border-r border-(--colors-border-default)">
+              <div className="flex justify-center w-23.25 pt-1.75 h-8 cursor-pointer hover:bg-gray-100 border-r border-(--colors-border-default)">
                 <Icon name="Plus" className="h-4 w-4" />
               </div>
             </PopoverTrigger>
@@ -220,31 +221,37 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
     return cols;
   }, [columns, columnHelper, tableId]);
 
+  // useReactTable is only used for column sizing/headers — not row data.
+  // We pass an empty array because row rendering is handled directly via
+  // the virtualizer + getRow().
+  const emptyData = useMemo<RowData[]>(() => [], []);
   const table = useReactTable({
-    data: rows,
+    data: emptyData,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const { rows: tableRows } = table.getRowModel();
-
-  const dataColumnsWidth = table
-    .getAllColumns()
+  const allCols = table.getAllColumns();
+  // Pre-compute column sizes into a Map for O(1) lookup per cell
+  const colSizeMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const col of allCols) map.set(col.id, col.getSize());
+    return map;
+  }, [allCols]);
+  const rowNumWidth = colSizeMap.get("_rowNum") ?? 84;
+  const dataColumnsWidth = allCols
     .filter((col) => col.id !== "_addCol")
     .reduce((sum, col) => sum + col.getSize(), 0);
 
-  const rowVirtualizer = useVirtualizer({
-    count: tableRows.length,
+  const rowVirtualizer = useTanstackVirtualizer({
+    count: totalCount,
     estimateSize: () => ROW_HEIGHT,
     getScrollElement: () => tableContainerRef.current,
-    measureElement:
-      typeof window !== "undefined" && !navigator.userAgent.includes("Firefox")
-        ? (element: Element) => element.getBoundingClientRect().height
-        : undefined,
-    overscan: 5,
+    overscan: 10,
   });
 
-  scrollToRowRef.current = (index: number) => rowVirtualizer.scrollToIndex(index, { align: "center" });
+  scrollToRowRef.current = (index: number) =>
+    rowVirtualizer.scrollToIndex(index, { align: "center" });
 
   const navigateToCell = useCallback((rowIndex: number, columnId: string) => {
     setActiveCell(rowIndex, columnId);
@@ -252,11 +259,12 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
   }, [rowVirtualizer]);
 
   const virtualizerContextValue = useMemo<TableVirtualizerContextValue>(() => ({
-    scrollToIndex: (index: number) => rowVirtualizer.scrollToIndex(index, { align: "auto" }),
+    scrollToIndex: (index: number) =>
+      rowVirtualizer.scrollToIndex(index, { align: "auto" }),
     navigateToCell,
-    rowCount: tableRows.length,
+    rowCount: totalCount,
     queryInput,
-  }), [rowVirtualizer, navigateToCell, tableRows.length, queryInput]);
+  }), [rowVirtualizer, navigateToCell, totalCount, queryInput]);
 
   if (isLoading) {
     return (
@@ -275,83 +283,137 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
       <style ref={colSelectionStyleRef} />
       <div
         ref={tableContainerRef}
-        onScroll={(e) => fetchMoreOnBottomReached(e.currentTarget)}
-        className="flex-1 min-w-0 overflow-auto relative"
-        style={{ scrollPaddingTop: ROW_HEIGHT }}
+        onScroll={() => { rowVirtualizer._onScroll(); handleScroll(); }}
+        className="min-w-0 overflow-auto relative"
+        style={{ scrollPaddingTop: ROW_HEIGHT, height: "calc(100% - 34px)" }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
-        <table style={{ display: "grid", flexShrink: 0 }} className="text-sm">
-          {/* Header */}
-          <thead
-            style={{ display: "grid" }}
-            className="sticky top-0 z-1 bg-[#fbfcfe]"
-          >
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
-                {headerGroup.headers.map((header, headerIndex) => {
-                  const colId = header.column.id;
-                  const allSelected = rows.length > 0 && selectedRows.size === rows.length;
-                  const isAddCol = colId === "_addCol";
-                  const isSpecialCol = colId === "_rowNum" || isAddCol;
-                  const isFirstDataCol = headerIndex === 1;
-                  const headerBg = isSpecialCol ? undefined : allSelected ? "#e7edf6" : filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
+        {isFetching && (
+          <div className="sticky top-1.5 z-10 flex justify-end pointer-events-none" style={{ height: 0 }}>
+            <div className="mr-4 flex items-center gap-2 bg-white border border-gray-200 rounded-full px-5 py-3 shadow-sm whitespace-nowrap">
+              <div className="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-gray-300 border-t-blue-500 animate-spin" />
+              <span className="text-xs text-gray-500">Loading rows…</span>
+            </div>
+          </div>
+        )}
+        {/* Header */}
+        <div className="sticky top-0 z-1 bg-[#fbfcfe] text-sm" style={{ display: "flex", width: "100%" }}>
+          {table.getHeaderGroups().map((headerGroup) =>
+            headerGroup.headers.map((header) => {
+              const colId = header.column.id;
+              const allSelected = totalCount > 0 && selectedRows.size === totalCount;
+              const isAddCol = colId === "_addCol";
+              const isSpecialCol = colId === "_rowNum" || isAddCol;
+              const headerBg = isSpecialCol ? undefined : allSelected ? "#e7edf6" : filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
+              return (
+                <div
+                  key={header.id}
+                  {...(!isSpecialCol ? { "data-col": colId } : {})}
+                  className={`${isAddCol ? "" : "border-r"} ${colId === "_rowNum" ? "border-r-[#ccc]" : ""} border-b overflow-hidden shrink-0 p-0 ${allSelected || colId === "_rowNum" ? "" : "hover:bg-gray-50"} bg-white ${colId === "_rowNum" ? "" : "pt-px"}`}
+                  style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT, ...(colId !== "_rowNum" && { borderRightColor: "var(--colors-border-default)" }), borderBottomColor: "hsl(0, 0%, 82%)", ...(headerBg && { backgroundColor: headerBg }) }}
+                >
+                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Virtualized rows */}
+        <div
+          className="relative w-full bg-white"
+          style={{ height: `${rowVirtualizer.getTotalSize()}px`, overflow: "hidden", contain: "layout paint" }}
+          onClick={clearColumnSelection}
+        >
+          <div ref={rowVirtualizer.rowContainerRef} className="absolute top-0 left-0 w-full">
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const rowData = getRow(virtualRow.index);
+            const isPlaceholder = !rowData;
+            const isSelected = rowData ? selectedRows.has(rowData.id) : false;
+
+            return (
+              <div
+                data-index={virtualRow.index}
+                ref={(node) => rowVirtualizer.measureElement(node)}
+                key={virtualRow.index}
+                className={`absolute top-0 left-0 w-full group/row ${isSelected ? "bg-[#fbfcfe]" : "hover:bg-gray-50/80"} bg-[#f6f8fc] focus-within:z-10 text-sm`}
+                style={{
+                  display: "flex",
+                  transform: `translateY(${virtualRow.start}px)`,
+                  height: ROW_HEIGHT,
+                }}
+              >
+                {/* Row number / checkbox cell */}
+                <div
+                  data-col="_rowNum"
+                  className="border-b border-r border-(--colors-border-default) focus-within:border-transparent shrink-0 p-0 overflow-hidden bg-white group-hover/row:bg-[#f8f8f8] group-focus-within/row:bg-[#f8f8f8] focus-within:bg-white relative"
+                  style={{ display: "flex", width: rowNumWidth, height: ROW_HEIGHT, borderRightColor: "#ccc" }}
+                >
+                  <div className="w-8 h-8 flex justify-center ml-3 pt-1.75">
+                    <span className={`select-none text-gray-500 tabular-nums font-normal ${isSelected ? "hidden" : "group-hover/row:hidden"}`} style={{ fontSize: 12, fontWeight: 400 }}>
+                      {virtualRow.index + 1}
+                    </span>
+                    <div className={`${isSelected ? "flex" : "hidden group-hover/row:flex"}`}>
+                      <RowCheckbox
+                        checked={isSelected}
+                        onClick={() => {
+                          if (!rowData) return;
+                          setSelectedRows((prev) => {
+                            const next = new Set(prev);
+                            if (isSelected) next.delete(rowData.id);
+                            else next.add(rowData.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Data cells */}
+                {columns.map((col, colIdx) => {
+                  const isFirstCol = colIdx === 0;
+                  const isLastCol = colIdx === columns.length - 1;
+                  const colSize = colSizeMap.get(col.id) ?? (col.type === "NUMBER" ? 183 : 180);
+                  const { searchMatches: matches, searchMatchIndex: matchIdx, search: s, filteredColumnIds: fIds, sortedColumnIds: sIds, clearColumnSelection: clearColSel } = renderRef.current;
+                  const activeMatch = matches.length > 0 && matchIdx != null ? matches[matchIdx % matches.length] : null;
+                  const isActive = activeMatch?.rowIndex === virtualRow.index && activeMatch?.columnId === col.id;
+
                   return (
-                    <th
-                      key={header.id}
-                      {...(!isSpecialCol ? { "data-col": colId } : {})}
-                      className={`${isAddCol ? "" : "border-r"} ${colId === "_rowNum" ? "border-r-[#ccc]" : ""} border-b overflow-hidden shrink-0 p-0 ${allSelected || colId === "_rowNum" ? "" : "hover:bg-gray-50"} bg-white ${colId === "_rowNum" ? "" : "pt-px"}`}
-                      style={{ display: "flex", width: header.getSize(), height: ROW_HEIGHT, ...(colId !== "_rowNum" && { borderRightColor: "var(--colors-border-default)" }), borderBottomColor: "hsl(0, 0%, 82%)", ...(headerBg && { backgroundColor: headerBg }) }}
+                    <div
+                      key={col.id}
+                      data-col={col.id}
+                      className={`border-b border-r border-(--colors-border-default) focus-within:border-transparent shrink-0 flex items-center px-1.5 ${isSelected ? "bg-[#f1f6ff]" : "bg-white group-hover/row:bg-[#f8f8f8] group-focus-within/row:bg-[#f8f8f8]"} focus-within:bg-white relative`}
+                      style={{ display: "flex", width: colSize, height: ROW_HEIGHT }}
+                      {...(rowData ? { onContextMenu: (e: React.MouseEvent) => handleRowContextMenu(e, rowData.id) } : {})}
                     >
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
+                      {isPlaceholder ? null : (
+                        <EditableCell
+                          rowId={rowData.id}
+                          columnId={col.id}
+                          columnType={col.type}
+                          initialValue={String(rowData.values[col.id] ?? "")}
+                          isFirstCol={isFirstCol}
+                          isLastCol={isLastCol}
+                          isFirstRow={virtualRow.index === 0}
+                          search={s}
+                          isActiveSearchMatch={isActive}
+                          isFiltered={fIds.has(col.id)}
+                          isSorted={sIds.has(col.id)}
+                          rowIndex={virtualRow.index}
+                          rowCount={totalCount}
+                          onSaveCell={onSaveCell}
+                          onNavigateToCell={navigateToCell}
+                          onClearColumnSelection={clearColSel}
+                        />
+                      )}
+                    </div>
                   );
                 })}
-              </tr>
-            ))}
-          </thead>
-
-          {/* Body */}
-          <tbody
-            style={{
-              display: "grid",
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              position: "relative",
-            }} className="bg-white"
-            onClick={clearColumnSelection}
-          >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const row = tableRows[virtualRow.index]!;
-              const isSelected = selectedRows.has(row.original.id);
-              return (
-                <tr
-                  data-index={virtualRow.index}
-                  ref={(node) => rowVirtualizer.measureElement(node)}
-                  key={row.id}
-                  className={`group/row ${isSelected ? "bg-[#fbfcfe]" : "hover:bg-gray-50/80"} bg-[#f6f8fc] focus-within:z-10`}
-                  style={{
-                    display: "flex",
-                    position: "absolute",
-                    transform: `translateY(${virtualRow.start}px)`,
-                    width: "100%",
-                    height: ROW_HEIGHT,
-                  }}
-                >
-                  {row.getVisibleCells().filter((cell) => cell.column.id !== "_addCol").map((cell, colIndex) => (
-                    <td
-                      key={cell.id}
-                      data-col={cell.column.id}
-                      className={`border-b ${cell.id ? 'border-r' : ''} border-(--colors-border-default) focus-within:border-transparent shrink-0 ${colIndex === 0 ? "p-0 overflow-hidden" : "flex items-center px-1.5"} ${isSelected ? "bg-[#f1f6ff]" : "bg-white group-hover/row:bg-[#f8f8f8] group-focus-within/row:bg-[#f8f8f8]"} focus-within:bg-white relative`}
-                      style={{ display: "flex", width: cell.column.getSize(), height: ROW_HEIGHT, ...(colIndex === 0 && { borderRightColor: "#ccc" }) }}
-                      {...(colIndex > 0 ? { onContextMenu: (e: React.MouseEvent) => handleRowContextMenu(e, row.original.id) } : {})}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </div>
+            );
+          })}
+          </div>
+        </div>
 
         {/* add row */}
         <div
@@ -366,19 +428,15 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
           </div>
         </div>
 
-        {isFetchingNextPage && (
-          <div className="py-2 text-center text-xs text-gray-400">Loading more...</div>
-        )}
-
         {/* Filler to extend row number column border to bottom of container */}
-        <div className="flex flex-1 border-r w-21 border-[#ccc]"/></div>
+        <div className="flex flex-1 border-r w-21 border-[#ccc]"/>
       </div>
 
       {/* Summary bar */}
       <div className="relative flex items-center shrink-0 border-t border-(--colors-border-default) bg-white text-xs text-gray-500 h-8.5">
         <div className="absolute bottom-0 left-0 inline-flex border-r border-[#ccc] h-full w-21">
-          <span className="h-[24px] pl-2 pt-[5px] pb-[2px] pr-[8px] text-[11px] text-black tabular-nums">
-            {(() => { const count = search || filters?.length ? rows.length : Number(rowCount); return `${count.toLocaleString()} ${count === 1 ? "record" : "records"}`; })()}
+          <span className="h-6 pl-2 pt-1.25 pb-0.5 pr-2 text-[11px] text-black tabular-nums">
+            {(() => { const count = totalCount; return `${count.toLocaleString()} ${count === 1 ? "record" : "records"}`; })()}
           </span>
         </div>
         <BulkCreateInput queryInput={queryInput} />

@@ -74,13 +74,17 @@ export const rowRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
       }
 
-      const limit = input.cursor?.limit ?? input.limit;
+      const { limit, offset, cursor } = input;
       const hasSorts = input.sorts && input.sorts.length > 0;
       const hasFilters = input.filters && input.filters.length > 0;
       const hasSearch = !!input.search;
 
+      // Cursor-based pagination is only usable when ordering by `order` ASC
+      // (no custom sorts). With custom sorts the row order differs from `order`
+      // column so we must fall back to OFFSET.
+      const useCursor = cursor != null && !hasSorts;
+
       // Use raw SQL when sorts/filters/search involve JSON fields
-      // (Prisma doesn't support orderBy on JSON fields for PostgreSQL)
       if (hasSorts || hasFilters || hasSearch) {
         const params: (string | number)[] = [];
         const whereParts: string[] = [];
@@ -88,9 +92,9 @@ export const rowRouter = createTRPCRouter({
         params.push(input.tableId);
         whereParts.push(`"tableId" = $${params.length}`);
 
-        // Only use cursor-based WHERE when not sorting (order field is sequential)
-        if (input.cursor != null && !hasSorts) {
-          params.push(input.cursor.order);
+        // cursor-based WHERE (only for non-sorted queries)
+        if (useCursor) {
+          params.push(cursor.order);
           whereParts.push(`"order" > $${params.length}`);
         }
 
@@ -107,46 +111,51 @@ export const rowRouter = createTRPCRouter({
         }
 
         const orderParts = (input.sorts ?? []).map((s) => {
-          // columnId is system-generated cuid, direction validated by zod — safe to interpolate
-          // NULLS FIRST for ASC so empty cells appear before content (matching Airtable behavior)
           return `NULLIF("values"->>'${s.columnId}', '') ${s.direction === "desc" ? "DESC NULLS LAST" : "ASC NULLS FIRST"}`;
         });
         orderParts.push(`"order" ASC`);
 
-        params.push(limit + 1);
-        const limitParamIdx = params.length;
+        const whereClause = whereParts.join(" AND ");
 
-        // When sorting, use OFFSET-based pagination (cursor.order carries the offset)
+        params.push(limit);
+        const limitIdx = params.length;
+
         let offsetClause = "";
-        if (hasSorts && input.cursor != null) {
-          params.push(input.cursor.order);
+        if (!useCursor) {
+          params.push(offset);
           offsetClause = `OFFSET $${params.length}`;
         }
 
         const query = `
           SELECT "id", "order", "values"
           FROM "Row"
-          WHERE ${whereParts.join(" AND ")}
+          WHERE ${whereClause}
           ORDER BY ${orderParts.join(", ")}
-          LIMIT $${limitParamIdx}
+          LIMIT $${limitIdx}
           ${offsetClause}
         `;
 
-        const rawRows = await ctx.db.$queryRawUnsafe<
-          Array<{ id: string; order: number; values: unknown }>
-        >(query, ...params);
-
-        let nextCursor: { order: number; limit: number } | undefined;
-        if (rawRows.length > limit) {
-          rawRows.pop();
-          if (hasSorts) {
-            // For sorted queries, cursor.order is the offset for the next page
-            const currentOffset = input.cursor?.order ?? 0;
-            nextCursor = { order: currentOffset + limit, limit };
-          } else {
-            nextCursor = { order: rawRows[rawRows.length - 1]!.order, limit };
+        // Rebuild count params: need tableId + search/filter params only (no cursor, limit, offset)
+        const cParams: (string | number)[] = [];
+        const cWhere: string[] = [];
+        cParams.push(input.tableId);
+        cWhere.push(`"tableId" = $${cParams.length}`);
+        if (hasSearch) {
+          cParams.push(`%${input.search!}%`);
+          cWhere.push(`EXISTS (SELECT 1 FROM jsonb_each_text("values") AS kv WHERE kv.value ILIKE $${cParams.length})`);
+        }
+        if (hasFilters) {
+          for (const f of input.filters!) {
+            const cond = buildRawFilterCondition(f, cParams);
+            if (cond) cWhere.push(cond);
           }
         }
+        const countQ = `SELECT COUNT(*)::int AS count FROM "Row" WHERE ${cWhere.join(" AND ")}`;
+
+        const [rawRows, countResult] = await Promise.all([
+          ctx.db.$queryRawUnsafe<Array<{ id: string; order: number; values: unknown }>>(query, ...params),
+          ctx.db.$queryRawUnsafe<[{ count: number }]>(countQ, ...cParams),
+        ]);
 
         return {
           rows: rawRows.map((row) => ({
@@ -154,26 +163,38 @@ export const rowRouter = createTRPCRouter({
             order: row.order,
             values: castValues(row.values),
           })),
-          nextCursor,
+          totalCount: countResult[0]?.count ?? 0,
         };
       }
 
-      // Simple case: no sorts/filters/search — use Prisma
+      // Simple case: no sorts/filters/search
+      if (useCursor) {
+        // Cursor-based: efficient sequential scan via (tableId, order) index
+        const rows = await ctx.db.row.findMany({
+          where: { tableId: input.tableId, order: { gt: cursor.order } },
+          orderBy: [{ order: "asc" as const }],
+          take: limit,
+          select: { id: true, order: true, values: true },
+        });
+
+        return {
+          rows: rows.map((row) => ({
+            id: row.id,
+            order: row.order,
+            values: castValues(row.values),
+          })),
+          totalCount: Number(table.rowCount),
+        };
+      }
+
+      // Offset-based: for random-access jumps
       const rows = await ctx.db.row.findMany({
-        where: {
-          tableId: input.tableId,
-          ...(input.cursor != null && { order: { gt: input.cursor.order } }),
-        },
+        where: { tableId: input.tableId },
         orderBy: [{ order: "asc" as const }],
-        take: limit + 1,
+        skip: offset,
+        take: limit,
         select: { id: true, order: true, values: true },
       });
-
-      let nextCursor: { order: number; limit: number } | undefined;
-      if (rows.length > limit) {
-        rows.pop();
-        nextCursor = { order: rows[rows.length - 1]!.order, limit };
-      }
 
       return {
         rows: rows.map((row) => ({
@@ -181,7 +202,7 @@ export const rowRouter = createTRPCRouter({
           order: row.order,
           values: castValues(row.values),
         })),
-        nextCursor,
+        totalCount: Number(table.rowCount),
       };
     }),
 

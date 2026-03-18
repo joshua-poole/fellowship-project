@@ -25,22 +25,6 @@ export interface BasePopoverPanelProps {
   onDelete: () => void;
 }
 
-export interface EditableCellProps {
-  tableId: string;
-  rowId: string;
-  columnId: string;
-  columnType: string;
-  initialValue: string;
-  isFirstRow?: boolean;
-  isFirstCol?: boolean;
-  isLastCol?: boolean;
-  search?: string;
-  isActiveSearchMatch?: boolean;
-  isFiltered?: boolean;
-  isSorted?: boolean;
-  isColumnSelected?: boolean;
-  onClearColumnSelection?: () => void;
-}
 
 export interface TableTabsBarProps {
   tables: { id: string; name: string; order: number }[];
@@ -132,3 +116,39 @@ export type RowFilter = {
   operator: string;
   value?: string | number;
 };
+
+export interface EditableCellProps {
+  rowId: string;
+  columnId: string;
+  columnType: string;
+  initialValue: string;
+  isFirstRow: boolean;
+  isFirstCol: boolean;
+  isLastCol: boolean;
+  search: string | undefined;
+  isActiveSearchMatch: boolean;
+  isFiltered: boolean;
+  isSorted: boolean;
+  isColumnSelected?: boolean;
+  rowIndex: number;
+  rowCount: number;
+  onSaveCell: (rowId: string, columnId: string, value: string | number) => void;
+  onNavigateToCell: (rowIndex: number, columnId: string) => void;
+  onClearColumnSelection?: () => void;
+}
+
+export interface ColumnHeaderCellProps {
+  col: ColDef;
+  columns: ColDef[];
+  tableId: string;
+  isFirstCol: boolean;
+  editingColumnId: string | null;
+  setEditingColumnId: (id: string | null) => void;
+  onCreateColumn: (input: { tableId: string; name: string; type: "TEXT" | "NUMBER"; order?: number }) => void;
+  onUpdateColumn: (input: { id: string; name: string; type: "TEXT" | "NUMBER" }) => void;
+  onDeleteColumn: (input: { id: string }) => void;
+  onAddSort?: (columnId: string, direction: "asc" | "desc") => void;
+  onAddFilter?: (columnId: string) => void;
+  onHideColumn?: (columnId: string) => void;
+  onSelectColumn?: (columnId: string) => void;
+}

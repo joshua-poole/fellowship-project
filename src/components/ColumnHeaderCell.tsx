@@ -16,23 +16,7 @@ import {
 } from "~/components/ui/popover";
 import { ColumnFieldForm } from "./ColumnFieldForm";
 import type { ColumnTypeValue } from "./ColumnFieldForm";
-import type { ColDef } from "~/types/Props";
-
-interface ColumnHeaderCellProps {
-  col: ColDef;
-  columns: ColDef[];
-  tableId: string;
-  isFirstCol: boolean;
-  editingColumnId: string | null;
-  setEditingColumnId: (id: string | null) => void;
-  onCreateColumn: (input: { tableId: string; name: string; type: "TEXT" | "NUMBER"; order?: number }) => void;
-  onUpdateColumn: (input: { id: string; name: string; type: "TEXT" | "NUMBER" }) => void;
-  onDeleteColumn: (input: { id: string }) => void;
-  onAddSort?: (columnId: string, direction: "asc" | "desc") => void;
-  onAddFilter?: (columnId: string) => void;
-  onHideColumn?: (columnId: string) => void;
-  onSelectColumn?: (columnId: string) => void;
-}
+import type { ColDef, ColumnHeaderCellProps } from "~/types/Props";
 
 export function ColumnHeaderCell({
   col,

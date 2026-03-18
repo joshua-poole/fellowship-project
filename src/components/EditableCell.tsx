@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { api } from "~/trpc/react";
-import { useTableVirtualizer } from "~/components/VirtualizedTable";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import type { EditableCellProps } from "~/types/Props";
 
 // Survives component remounts — stores edited values until server data catches up
@@ -36,8 +34,8 @@ function HighlightedText({ text, search }: { text: string; search: string }) {
   );
 }
 
-export function EditableCell({
-  tableId,
+
+export const EditableCell = React.memo(function EditableCell({
   rowId,
   columnId,
   columnType,
@@ -49,7 +47,10 @@ export function EditableCell({
   isActiveSearchMatch,
   isFiltered,
   isSorted,
-  isColumnSelected,
+  rowIndex: _rowIndex,
+  rowCount,
+  onSaveCell,
+  onNavigateToCell,
   onClearColumnSelection,
 }: EditableCellProps) {
   const cellKey = `${rowId}:${columnId}`;
@@ -61,7 +62,6 @@ export function EditableCell({
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wasFocusedRef = useRef(false);
-  const utils = api.useUtils();
 
   // Sync value from pending edits or server data when not focused
   useEffect(() => {
@@ -79,15 +79,14 @@ export function EditableCell({
     }
   }, [initialValue, cellKey]);
 
-  // Restore focus when this cell mounts as the active cell (scroll-back + navigateToCell)
-  // Only runs on mount — running every render interferes with click-to-edit flow
+  // Restore focus when this cell mounts as the active cell
   const mountedRef = useRef(false);
   useLayoutEffect(() => {
     if (mountedRef.current) return;
     mountedRef.current = true;
     if (!activeCell) return;
-    const tr = inputRef.current?.closest("tr");
-    const idx = tr ? Number(tr.getAttribute("data-index")) : -1;
+    const row = inputRef.current?.closest("[data-index]");
+    const idx = row ? Number(row.getAttribute("data-index")) : -1;
     if (activeCell.columnId === columnId && idx === activeCell.rowIndex) {
       if (document.activeElement !== inputRef.current) {
         inputRef.current?.focus({ preventScroll: true });
@@ -95,18 +94,11 @@ export function EditableCell({
     }
   });
 
-  const virtualizer = useTableVirtualizer();
-  const updateCell = api.row.updateCell.useMutation({
-    onSettled: () => {
-      void utils.row.getByTable.invalidate({ tableId });
-    },
-  });
-
   const save = () => {
     if (value !== initialValue) {
       pendingEdits.set(cellKey, value);
       const coerced = columnType === "NUMBER" && value !== "" ? Number(value) : value;
-      updateCell.mutate({ rowId, columnId, value: coerced });
+      onSaveCell(rowId, columnId, coerced);
     }
   };
 
@@ -114,15 +106,15 @@ export function EditableCell({
     current: HTMLInputElement,
     direction: "up" | "down" | "left" | "right",
   ) => {
-    const td = current.closest("td");
-    const row = current.closest("tr");
-    if (!td || !row) return false;
+    const cell = current.closest("[data-col]");
+    const row = current.closest("[data-index]");
+    if (!cell || !row) return false;
 
     if (direction === "left" || direction === "right") {
       const sibling =
         direction === "left"
-          ? td.previousElementSibling
-          : td.nextElementSibling;
+          ? cell.previousElementSibling
+          : cell.nextElementSibling;
       const nextInput = sibling?.querySelector<HTMLInputElement>(
         "input[data-col-id]",
       );
@@ -137,14 +129,14 @@ export function EditableCell({
     const targetIndex =
       direction === "down" ? currentIndex + 1 : currentIndex - 1;
 
-    if (targetIndex < 0 || (virtualizer && targetIndex >= virtualizer.rowCount)) {
+    if (targetIndex < 0 || targetIndex >= rowCount) {
       return false;
     }
 
     // Try direct DOM focus first (target is likely within overscan)
-    const container = row.closest("tbody");
+    const container = row.parentElement;
     if (container) {
-      const targetRow = container.querySelector<HTMLElement>(`tr[data-index="${targetIndex}"]`);
+      const targetRow = container.querySelector<HTMLElement>(`[data-index="${targetIndex}"]`);
       const nextInput = targetRow?.querySelector<HTMLInputElement>(`input[data-col-id="${columnId}"]`);
       if (nextInput && targetRow) {
         nextInput.focus({ preventScroll: true });
@@ -153,13 +145,9 @@ export function EditableCell({
       }
     }
 
-    // Target not in DOM — set activeCell and scroll, layout effect will handle focus
-    if (virtualizer) {
-      virtualizer.navigateToCell(targetIndex, columnId);
-      return true;
-    }
-
-    return false;
+    // Target not in DOM — set activeCell and scroll
+    onNavigateToCell(targetIndex, columnId);
+    return true;
   };
 
   const navigate = (
@@ -167,17 +155,14 @@ export function EditableCell({
     direction: "up" | "down" | "left" | "right",
   ) => {
     onClearColumnSelection?.();
-    // save() is handled by onBlur which fires synchronously when focus moves
     focusAdjacentCell(input, direction);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       if (editing) {
-        // Exit editing mode but stay focused/selected
         setEditing(false);
       } else {
-        // Exit cell entirely
         setValue(initialValue);
         clearActiveCell();
         e.currentTarget.blur();
@@ -186,7 +171,6 @@ export function EditableCell({
       return;
     }
 
-    // Enter editing mode on any printable key when selected but not editing
     if (!editing && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
       setEditing(true);
       setValue(e.key);
@@ -194,21 +178,18 @@ export function EditableCell({
       return;
     }
 
-    // Enter starts editing if not already, otherwise navigates down
     if (e.key === "Enter") {
       e.preventDefault();
       navigate(e.currentTarget, "down");
       return;
     }
 
-    // Tab always navigates
     if (e.key === "Tab") {
       e.preventDefault();
       navigate(e.currentTarget, e.shiftKey ? "left" : "right");
       return;
     }
 
-    // Arrow keys only navigate when not editing
     if (!editing) {
       const arrowMap: Record<string, "up" | "down" | "left" | "right"> = {
         ArrowDown: "down",
@@ -281,9 +262,9 @@ export function EditableCell({
         }}
         onFocus={() => {
           setFocused(true);
-          const tr = inputRef.current?.closest("tr");
-          if (tr) {
-            activeCell = { rowIndex: Number(tr.getAttribute("data-index")), columnId };
+          const row = inputRef.current?.closest("[data-index]");
+          if (row) {
+            activeCell = { rowIndex: Number(row.getAttribute("data-index")), columnId };
           }
         }}
         onClick={() => { if (wasFocusedRef.current && !editing) setEditing(true); wasFocusedRef.current = true; }}
@@ -293,8 +274,6 @@ export function EditableCell({
           setEditing(false);
           wasFocusedRef.current = false;
           save();
-          // Keep activeCell ONLY if focus went to nothing (unmount from scroll).
-          // Clear for all other cases — another cell's onFocus or navigateToCell will set it.
           const related = e.relatedTarget as HTMLElement | null;
           if (related !== null) {
             activeCell = null;
@@ -304,4 +283,4 @@ export function EditableCell({
       />
     </>
   );
-}
+});

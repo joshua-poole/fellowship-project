@@ -5,25 +5,35 @@ export type SearchMatch = { rowIndex: number; columnId: string };
 
 export function useSearchMatches(
   search: string | undefined,
-  rows: RowData[],
+  getRow: (index: number) => RowData | undefined,
+  totalCount: number,
   columns: ColDef[],
+  visibleFirst: number,
+  visibleLast: number,
   searchMatchIndex: number | undefined,
   onSearchMatchCountChange: ((total: number) => void) | undefined,
 ) {
+  // Only search loaded/visible rows — server-side search already filters the
+  // full dataset.  Client-side matching is purely for highlighting.
   const searchMatches = useMemo(() => {
     if (!search) return [];
     const lower = search.toLowerCase();
     const matches: SearchMatch[] = [];
-    for (let r = 0; r < rows.length; r++) {
+    // Search a window around the visible range (loaded pages cover this)
+    const start = Math.max(0, visibleFirst - 500);
+    const end = Math.min(totalCount, visibleLast + 500);
+    for (let r = start; r < end; r++) {
+      const row = getRow(r);
+      if (!row) continue;
       for (const col of columns) {
-        const val = rows[r]?.values[col.id];
+        const val = row.values[col.id];
         if (val != null && String(val).toLowerCase().includes(lower)) {
           matches.push({ rowIndex: r, columnId: col.id });
         }
       }
     }
     return matches;
-  }, [search, rows, columns]);
+  }, [search, getRow, totalCount, columns, visibleFirst, visibleLast]);
 
   useEffect(() => {
     if (onSearchMatchCountChange) (onSearchMatchCountChange as (n: number) => void)(searchMatches.length);
