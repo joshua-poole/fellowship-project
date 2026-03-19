@@ -21,6 +21,7 @@ const ViewFilterSchema = ViewFilterModelSchema.pick({
   columnId: true,
   operator: true,
   value: true,
+  conjunction: true,
 });
 
 const ViewSortSchema = ViewSortModelSchema.pick({
@@ -40,7 +41,8 @@ const ViewHiddenColumnSchema = ViewHiddenColumnModelSchema.pick({
 const ViewFilterInputSchema = ViewFilterModelSchema.pick({
   columnId: true,
   value: true,
-}).partial({ value: true }).extend({
+  conjunction: true,
+}).partial({ value: true, conjunction: true }).extend({
   operator: FilterOperatorSchema,
 });
 

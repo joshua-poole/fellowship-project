@@ -25,6 +25,7 @@ export function useViewConfig(
         columnId: f.columnId,
         operator: f.operator,
         value: f.value ?? null,
+        conjunction: (f.conjunction === "and" || f.conjunction === "or") ? f.conjunction : undefined,
       })) ?? []);
       setSorts(activeView.sorts?.map((s) => ({
         columnId: s.columnId,
@@ -50,6 +51,7 @@ export function useViewConfig(
           columnId: f.columnId,
           operator: f.operator as "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt",
           value: f.value ?? null,
+          conjunction: f.conjunction,
         })),
       }),
       ...(update.sorts !== undefined && {

@@ -9,10 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { OmniBaseView } from "./icons/OmniBaseView";
+import { OmniIcon } from "./icons/OmniIcon";
 import { LogoIcon } from "./Logo";
 import type { AppSidebarProps } from "~/types/Props";
-import { OmniBaseViewNew } from './icons/OmniBaseViewNew';
 
 const AVATAR_COLORS = [
   "bg-teal-300", "bg-rose-300", "bg-violet-300", "bg-sky-300",
@@ -41,8 +40,7 @@ export function AppSidebar({ session, onSignOut }: AppSidebarProps) {
           <Icon name="ArrowLeft" className="h-5 w-5 hidden group-hover:block text-gray-600" />
         </div>
         <div className="flex items-center h-7 justify-center px-2 rounded-md cursor-pointer hover:bg-gray-100">
-          <OmniBaseView />
-          {/* <OmniBaseViewNew /> */}
+          <OmniIcon size={28} innerRadius={50} outerRadius={65} innerOpacity={0.2} style={{ color: "currentColor" }} />
         </div>
       </div>
 

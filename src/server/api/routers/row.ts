@@ -53,6 +53,50 @@ function buildRawFilterCondition(
   }
 }
 
+/**
+ * Groups filters into AND/OR segments and builds a composite WHERE clause.
+ *
+ * Filters are split into groups at each "or" conjunction boundary.
+ * Within each group, conditions are ANDed together.
+ * Groups are then ORed together.
+ *
+ * Example: [Where A, and B, or C, and D] → (A AND B) OR (C AND D)
+ */
+function buildFilterClause(
+  filters: RowFilter[],
+  params: (string | number)[],
+): string | null {
+  if (filters.length === 0) return null;
+
+  // Split into groups: a new group starts at each "or" conjunction
+  const groups: RowFilter[][] = [[]];
+  for (const f of filters) {
+    if (f.conjunction === "or") {
+      groups.push([f]);
+    } else {
+      groups[groups.length - 1]!.push(f);
+    }
+  }
+
+  const groupClauses: string[] = [];
+  for (const group of groups) {
+    const conditions: string[] = [];
+    for (const f of group) {
+      const cond = buildRawFilterCondition(f, params);
+      if (cond) conditions.push(cond);
+    }
+    if (conditions.length === 1) {
+      groupClauses.push(conditions[0]!);
+    } else if (conditions.length > 1) {
+      groupClauses.push(`(${conditions.join(" AND ")})`);
+    }
+  }
+
+  if (groupClauses.length === 0) return null;
+  if (groupClauses.length === 1) return groupClauses[0]!;
+  return `(${groupClauses.join(" OR ")})`;
+}
+
 function castValues(values: unknown): Record<string, string | number> {
   return (values ?? {}) as Record<string, string | number>;
 }
@@ -104,10 +148,8 @@ export const rowRouter = createTRPCRouter({
         }
 
         if (hasFilters) {
-          for (const f of input.filters!) {
-            const cond = buildRawFilterCondition(f, params);
-            if (cond) whereParts.push(cond);
-          }
+          const filterClause = buildFilterClause(input.filters!, params);
+          if (filterClause) whereParts.push(filterClause);
         }
 
         const orderParts = (input.sorts ?? []).map((s) => {
@@ -145,10 +187,8 @@ export const rowRouter = createTRPCRouter({
           cWhere.push(`EXISTS (SELECT 1 FROM jsonb_each_text("values") AS kv WHERE kv.value ILIKE $${cParams.length})`);
         }
         if (hasFilters) {
-          for (const f of input.filters!) {
-            const cond = buildRawFilterCondition(f, cParams);
-            if (cond) cWhere.push(cond);
-          }
+          const filterClause = buildFilterClause(input.filters!, cParams);
+          if (filterClause) cWhere.push(filterClause);
         }
         const countQ = `SELECT COUNT(*)::int AS count FROM "Row" WHERE ${cWhere.join(" AND ")}`;
 

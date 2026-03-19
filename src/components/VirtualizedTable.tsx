@@ -20,8 +20,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "~/components/ui/popover";
-import { api } from "~/trpc/react";
-import { useWindowedRows } from "~/hooks/useWindowedRows";
+import { useOptimisticRows } from "~/hooks/useOptimisticRows";
 import { useSearchMatches } from "~/hooks/useSearchMatches";
 import { useRowMutations } from "~/hooks/useRowMutations";
 import { useColumnMutations } from "~/hooks/useColumnMutations";
@@ -53,11 +52,18 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
     const input: TableQueryInput = { tableId, limit: PAGE_SIZE, offset: 0 };
     if (search) input.search = search;
     if (filters?.length) {
-      input.filters = filters.map((f) => ({
-        columnId: f.columnId,
-        operator: f.operator as NonNullable<TableQueryInput["filters"]>[number]["operator"],
-        ...(f.value != null && f.value !== "" ? { value: f.value } : {}),
-      }));
+      const applicable = filters.filter((f) => {
+        if (f.operator === "is_empty" || f.operator === "is_not_empty") return true;
+        return f.value != null && f.value !== "";
+      });
+      if (applicable.length > 0) {
+        input.filters = applicable.map((f) => ({
+          columnId: f.columnId,
+          operator: f.operator as NonNullable<TableQueryInput["filters"]>[number]["operator"],
+          ...(f.value != null && f.value !== "" ? { value: f.value } : {}),
+          ...(f.conjunction ? { conjunction: f.conjunction } : {}),
+        }));
+      }
     }
     if (sorts?.length) {
       input.sorts = sorts.map((s) => ({ columnId: s.columnId, direction: s.direction }));
@@ -66,25 +72,18 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
   }, [tableId, search, filters, sorts]);
 
   // Extracted hooks
-  const { getRow, totalCount, isLoading, isFetching, tableContainerRef, handleScroll, visibleFirst, visibleLast } = useWindowedRows(queryInput, rowCount);
+  const { getRow, saveCell: onSaveCell, totalCount, isLoading, isFetching, tableContainerRef, handleScroll, visibleFirst, visibleLast } = useOptimisticRows(queryInput, rowCount);
   const { searchMatches, scrollToRowRef } = useSearchMatches(search, getRow, totalCount, columns, visibleFirst, visibleLast, searchMatchIndex, onSearchMatchCountChange);
   const { createRow, deleteRow } = useRowMutations(tableId);
   const columnMutations = useColumnMutations(tableId);
 
-  // Single mutation instance for all cells (instead of one per EditableCell)
-  const utils = api.useUtils();
-  const updateCell = api.row.updateCell.useMutation({
-    onSettled: () => { void utils.row.getByTable.invalidate({ tableId }); },
-  });
-  const onSaveCell = useCallback(
-    (rowId: string, columnId: string, value: string | number) => {
-      updateCell.mutate({ rowId, columnId, value });
-    },
-    [updateCell],
-  );
-
   // Compute sets of columns with active filters/sorts for cell coloring
-  const filteredColumnIds = useMemo(() => new Set(filters?.map((f) => f.columnId) ?? []), [filters]);
+  const filteredColumnIds = useMemo(() => new Set(
+    filters?.filter((f) => {
+      if (f.operator === "is_empty" || f.operator === "is_not_empty") return true;
+      return f.value != null && f.value !== "";
+    }).map((f) => f.columnId) ?? []
+  ), [filters]);
   const sortedColumnIds = useMemo(() => new Set(sorts?.map((s) => s.columnId) ?? []), [sorts]);
 
   // Column definitions
@@ -177,8 +176,8 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                 if (colSelectionStyleRef.current) {
                   const escaped = CSS.escape(colId);
                   colSelectionStyleRef.current.textContent = `
-                    td[data-col="${escaped}"]:not(:focus-within) { background-color: #f1f6ff !important; }
-                    th[data-col="${escaped}"] { background-color: #e7edf6 !important; }
+                    [data-col="${escaped}"] { background: var(--cell-background-selected) !important; }
+                    div.sticky [data-col="${escaped}"] { background-color: var(--cell-background-header-selected) !important; }
                   `;
                 }
               }}
@@ -273,7 +272,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
 
   return (
     <TableVirtualizerContext.Provider value={virtualizerContextValue}>
-    <div className="flex flex-col justify-between h-full w-full bg-[#f6f8fc]">
+    <div className="flex flex-col justify-between h-full w-full bg-[#f6f8fc] relative after:content-[''] after:absolute after:top-0 after:bottom-0 after:left-[83px] after:w-px after:bg-[#ccc] after:z-3 after:pointer-events-none">
       {/* Dynamic style for column selection — avoids React re-renders */}
       <style ref={colSelectionStyleRef} />
       <div
@@ -282,14 +281,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
         className="min-w-0 overflow-auto relative"
         style={{ scrollPaddingTop: ROW_HEIGHT, height: "calc(100% - 34px)" }}
       >
-          {isFetching && (
-            <div className="sticky top-1.5 z-10 flex justify-end pointer-events-none" style={{ height: 0 }}>
-              <div className="mr-4 flex items-center gap-2 bg-white border border-gray-200 rounded-full px-5 py-3 shadow-sm whitespace-nowrap">
-                <div className="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-gray-300 border-t-blue-500 animate-spin" />
-                <span className="text-xs text-gray-500">Loading rows…</span>
-              </div>
-            </div>
-          )}
+          {/* Loading indicator moved to summary bar */}
           {/* Header — sticky so it stays visible while rows scroll */}
           <div className="sticky top-0 z-2 bg-[#fbfcfe] text-sm shrink-0" style={{ display: "flex", width: "100%" }}>
             {table.getHeaderGroups().map((headerGroup) =>
@@ -298,7 +290,10 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
                 const allSelected = totalCount > 0 && selectedRows.size === totalCount;
                 const isAddCol = colId === "_addCol";
                 const isSpecialCol = colId === "_rowNum" || isAddCol;
-                const headerBg = isSpecialCol ? undefined : allSelected ? "#e7edf6" : filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
+                const isHeaderSearchMatch = !isSpecialCol && !!search && columns.some((c) => c.id === colId && c.name.toLowerCase().includes(search.toLowerCase()));
+                const activeMatch = searchMatches.length > 0 && searchMatchIndex != null ? searchMatches[searchMatchIndex % searchMatches.length] : null;
+                const isActiveHeaderMatch = isHeaderSearchMatch && activeMatch?.rowIndex === -1 && activeMatch?.columnId === colId;
+                const headerBg = isSpecialCol ? undefined : isActiveHeaderMatch ? "var(--cell-background-foundCursor)" : isHeaderSearchMatch ? "var(--cell-background-found-selected)" : allSelected ? "#e7edf6" : filteredColumnIds.has(colId) ? "#ebfbec4D" : sortedColumnIds.has(colId) ? "#fff2ea4D" : undefined;
                 return (
                   <div
                     key={header.id}
@@ -446,6 +441,12 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
             {(() => { const count = totalCount; return `${count.toLocaleString()} ${count === 1 ? "record" : "records"}`; })()}
           </span>
         </div>
+        {isFetching && (
+          <div className="flex items-center gap-1.5 ml-auto mr-2">
+            <div className="h-3 w-3 shrink-0 rounded-full border-[1.5px] border-gray-300 border-t-black animate-spin" />
+            <span className="text-[11px] text-gray-500">Loading…</span>
+          </div>
+        )}
         <BulkCreateInput queryInput={queryInput} />
       </div>
 

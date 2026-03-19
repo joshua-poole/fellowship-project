@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Icon } from "./icons/Icon";
 import {
   DropdownMenu,
@@ -9,6 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import type { TableTabsBarProps } from "~/types/Props";
 
 /** Derive a very light tint from a hex color (e.g. #407c4a -> #e6fce8) */
@@ -92,9 +97,12 @@ export function TableTabsBar({
             <div style={{ height: 12, width: 1, backgroundColor: "rgba(0, 0, 0, 0.1)" }} />
           </div>
         )}
-        <button className="h-8 flex flex-none justify-center items-center gap-1 transition-colors px-3 cursor-pointer">
-          <Icon name="ChevronDown" className="h-4 w-4 text-gray-500" />
-        </button>
+        <TableListPopover
+          tables={tables}
+          activeTableId={activeTableId}
+          onSelectTable={onSelectTable}
+          onCreateTable={onCreateTable}
+        />
 
         <button
           className="group flex items-center px-3 ml-px transition-colors cursor-pointer gap-0"
@@ -114,5 +122,96 @@ export function TableTabsBar({
         <Icon name="ChevronDown" className="h-4 w-4 flex-none" />
       </div>
     </div>
+  );
+}
+
+function TableListPopover({
+  tables,
+  activeTableId,
+  onSelectTable,
+  onCreateTable,
+}: {
+  tables: TableTabsBarProps["tables"];
+  activeTableId: string;
+  onSelectTable: (id: string) => void;
+  onCreateTable: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = tables.filter((t) =>
+    t.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  return (
+    <Popover onOpenChange={() => setSearch("")}>
+      <PopoverTrigger asChild>
+        <button className="h-8 flex flex-none justify-center items-center gap-1 transition-colors px-3 cursor-pointer">
+          <Icon name="ChevronDown" className="h-4 w-4 text-gray-500" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="start"
+        sideOffset={4}
+        className="p-0 border-none"
+        style={{
+          width: 456,
+          borderRadius: 3,
+          boxShadow: "0px 0px 1px rgba(0,0,0,0.24), 0px 0px 2px rgba(0,0,0,0.16), 0px 3px 4px rgba(0,0,0,0.06), 0px 6px 8px rgba(0,0,0,0.06), 0px 12px 16px rgba(0,0,0,0.08), 0px 18px 32px rgba(0,0,0,0.06)",
+        }}
+      >
+        <div className="flex flex-col px-4 py-2">
+          {/* Search */}
+          <div className="flex items-center border-b border-gray-200">
+            <div className="flex items-center justify-center p-2 text-gray-400">
+              <Icon name="MagnifyingGlass" className="h-4 w-4" />
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Find a table"
+              className="flex-auto py-2 pr-4 text-sm bg-transparent outline-none border-none placeholder:text-gray-400"
+            />
+          </div>
+
+          {/* Table list */}
+          <div className="overflow-auto py-2" style={{ maxHeight: "calc(65vh - 100px)" }}>
+            {filtered.map((t) => {
+              const isActive = t.id === activeTableId;
+              return (
+                <div
+                  key={t.id}
+                  className={`flex items-center rounded cursor-pointer ${isActive ? "bg-gray-100" : "hover:bg-gray-50"}`}
+                  onClick={() => onSelectTable(t.id)}
+                >
+                  <div className="flex flex-auto items-center py-2 pr-2">
+                    <div className="flex flex-none items-center justify-center" style={{ width: 32 }}>
+                      {isActive && <Icon name="Check" className="h-4 w-4" />}
+                    </div>
+                    <span className={`text-sm truncate ${isActive ? "font-semibold" : ""}`}>{t.name}</span>
+                  </div>
+                  <button className="flex items-center justify-center px-2 text-gray-400 hover:text-gray-600">
+                    <Icon name="EyeSlash" className="h-4 w-4" />
+                  </button>
+                  <div className="flex items-center justify-center p-2 text-gray-300 cursor-grab">
+                    <Icon name="DotsSixVertical" className="h-4 w-4" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add table */}
+          <div
+            className="flex items-center border-t border-gray-200 pt-3 pb-2 px-2 cursor-pointer text-gray-500 hover:text-gray-900"
+            onClick={onCreateTable}
+          >
+            <Icon name="Plus" className="h-4 w-4 mr-1 shrink-0" />
+            <span className="text-sm font-semibold">Add table</span>
+            <Icon name="ChevronDown" className="h-4 w-4 ml-auto -rotate-90" />
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

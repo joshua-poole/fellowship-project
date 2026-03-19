@@ -19,6 +19,12 @@ export function useSearchMatches(
     if (!search) return [];
     const lower = search.toLowerCase();
     const matches: SearchMatch[] = [];
+    // Include header matches (rowIndex -1)
+    for (const col of columns) {
+      if (col.name.toLowerCase().includes(lower)) {
+        matches.push({ rowIndex: -1, columnId: col.id });
+      }
+    }
     // Search a window around the visible range (loaded pages cover this)
     const start = Math.max(0, visibleFirst - 500);
     const end = Math.min(totalCount, visibleLast + 500);

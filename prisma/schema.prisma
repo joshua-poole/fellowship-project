@@ -161,12 +161,13 @@ model View {
 }
 
 model ViewFilter {
-  id       String  @id
-  viewId   String
-  view     View    @relation(fields: [viewId], references: [id], onDelete: Cascade)
-  columnId String
-  operator String
-  value    String?
+  id          String  @id
+  viewId      String
+  view        View    @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  columnId    String
+  operator    String
+  value       String?
+  conjunction String?
 
   @@index([viewId, columnId])
 }

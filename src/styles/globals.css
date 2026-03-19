@@ -301,6 +301,7 @@
   --cell-background-found: #fff3d3;
   --cell-background-foundCursor: #ffd66b;
   --cell-background-selected: #f1f6ff;
+  --cell-background-header-selected: #e7edf6;
   --row-background-cursor: #f8f8f8;
   --cell-background-row-number-hover: hsl(200, 18%, 95%);
   --cell-background-ghost-row-number-hover: hsl(200, 18%, 95%);

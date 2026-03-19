@@ -108,8 +108,12 @@ export function BaseView({ baseId, tableId }: { baseId: string; tableId?: string
         />
 
         <ViewsToolbar
+          activeViewId={activeView?.id}
           activeViewName={activeView?.name ?? "Grid view"}
+          viewCount={tableData?.views?.length ?? 0}
           onToggleViewsSidebar={() => setViewsSidebarOpen((o) => !o)}
+          onRenameView={(id, name) => viewMutations.update.mutate({ id, name })}
+          onDeleteView={(id) => viewMutations.remove.mutate({ id })}
           columns={columns}
           search={viewConfig.search}
           onSearchChange={viewConfig.handleSearchChange}

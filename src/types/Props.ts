@@ -41,6 +41,7 @@ interface ViewFilter {
   columnId: string;
   operator: string;
   value?: string | number | null;
+  conjunction?: "and" | "or";
 }
 
 interface ViewSort {
@@ -115,7 +116,7 @@ export type QueryInput = { tableId: string; limit?: number; [key: string]: unkno
 export type ViewData = {
   id: string;
   search: string | null;
-  filters: { columnId: string; operator: string; value: string | null }[];
+  filters: { columnId: string; operator: string; value: string | null; conjunction?: string | null }[];
   sorts: { columnId: string; direction: string }[];
   hiddenColumns: { columnId: string }[];
 };
@@ -125,7 +126,7 @@ export type ViewUpdatePayload = {
   search?: string | null;
   name?: string;
   order?: number;
-  filters?: { columnId: string; operator: "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt"; value?: string | null }[];
+  filters?: { columnId: string; operator: "equals" | "contains" | "not_contains" | "is_empty" | "is_not_empty" | "gt" | "lt"; value?: string | null; conjunction?: "and" | "or" }[];
   sorts?: { columnId: string; direction: "asc" | "desc"; order?: number }[];
   hiddenColumns?: string[];
 };
@@ -134,6 +135,7 @@ export type RowFilter = {
   columnId: string;
   operator: string;
   value?: string | number;
+  conjunction?: "and" | "or";
 };
 
 export interface EditableCellProps {
@@ -170,4 +172,6 @@ export interface ColumnHeaderCellProps {
   onAddFilter?: (columnId: string) => void;
   onHideColumn?: (columnId: string) => void;
   onSelectColumn?: (columnId: string) => void;
+  search?: string;
+  isActiveSearchMatch?: boolean;
 }

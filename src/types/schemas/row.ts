@@ -39,6 +39,7 @@ export const RowGetByTableInputSchema = RowModelSchema.pick({
           "lt",
         ]),
         value: z.union([z.string(), z.number()]).optional(),
+        conjunction: z.enum(["and", "or"]).optional(),
       }),
     )
     .optional(),

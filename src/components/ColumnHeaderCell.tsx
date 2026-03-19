@@ -50,87 +50,101 @@ export function ColumnHeaderCell({
     <Popover open={editingColumnId === col.id} onOpenChange={(open) => { if (!open) setEditingColumnId(null); }}>
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <PopoverAnchor asChild>
-          <div
-            className={`group/header relative flex items-center w-full h-full overflow-hidden px-2 cursor-pointer pt-px ${isFirstCol ? "pl-px" : ""}`}
-            onClick={handleHeaderClick}
-          >
-            <div className="absolute left-0 top-1.75 right-5.5 h-4 leading-4 flex items-center">
-              <div className="absolute top-0 left-1.25 w-4 h-4">
-                {col.type === "NUMBER"
-                  ? <Icon name="HashStraight" className="flex-none h-4 w-4 shrink-0" style={{ color: "var(--colors-foreground-default)" }} />
-                  : <Icon name="TextAlt" className="flex-none h-4 w-4 shrink-0" style={{ color: "var(--colors-foreground-default)" }} />
+          <DropdownMenuTrigger asChild>
+            <div
+              className={`group/header relative flex items-center w-full h-full overflow-hidden px-2 cursor-pointer pt-px ${isFirstCol ? "pl-px" : ""}`}
+              onClick={handleHeaderClick}
+              onPointerDown={(e) => {
+                // Prevent DropdownMenuTrigger from opening on left-click;
+                // only the chevron button and right-click should open it.
+                if (e.button === 0 && !(e.target as HTMLElement).closest("[data-chevron-trigger]")) {
+                  e.preventDefault();
                 }
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setDropdownOpen(true);
+              }}
+            >
+              <div className="absolute left-0 top-1.75 right-5.5 h-4 leading-4 flex items-center">
+                <div className="absolute top-0 left-1.25 w-4 h-4">
+                  {col.type === "NUMBER"
+                    ? <Icon name="HashStraight" className="flex-none h-4 w-4 shrink-0" style={{ color: "var(--colors-foreground-default)" }} />
+                    : <Icon name="TextAlt" className="flex-none h-4 w-4 shrink-0" style={{ color: "var(--colors-foreground-default)" }} />
+                  }
+                </div>
+                <span className={`truncate font-medium leading-normal font-weight-500 absolute left-6.25 -top-0.5 ${!isFirstCol ? "translate-x-px" : ""}`}>{col.name}</span>
               </div>
-              <span className={`truncate font-medium leading-normal font-weight-500 absolute left-6.25 -top-0.5 ${!isFirstCol ? "translate-x-px" : ""}`}>{col.name}</span>
-            </div>
-            <DropdownMenuTrigger asChild>
               <button
                 data-chevron-trigger
                 className="invisible group-hover/header:visible absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center shrink-0 h-5 w-5 rounded hover:bg-black/10"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDropdownOpen((o) => !o);
+                }}
               >
                 <Icon name="ChevronDown" className="h-3 w-3 text-gray-500" />
               </button>
-            </DropdownMenuTrigger>
-          </div>
+            </div>
+          </DropdownMenuTrigger>
         </PopoverAnchor>
-        <DropdownMenuContent align="start" side="bottom" className="w-60">
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => requestAnimationFrame(() => setEditingColumnId(col.id))}>
+        <DropdownMenuContent align="start" side="bottom" sideOffset={-1} alignOffset={-1} className="p-3" style={{ width: 320, minHeight: 619 }}>
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2" onClick={() => requestAnimationFrame(() => setEditingColumnId(col.id))}>
             <Icon name="Pencil" className="h-4 w-4" /> Edit field
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+          <DropdownMenuSeparator className="m-2" />
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2">
             <Icon name="Copy" className="h-4 w-4" /> Duplicate field
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="cursor-pointer gap-3 px-3 py-2"
+            className="cursor-pointer gap-3 p-2"
             disabled={isFirstCol}
             onClick={() => onCreateColumn({ tableId, name: `Field ${columns.length + 1}`, type: "TEXT", order: col.order })}
           >
             <Icon name="ArrowLeft" className="h-4 w-4" /> Insert left
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="cursor-pointer gap-3 px-3 py-2"
+            className="cursor-pointer gap-3 p-2"
             onClick={() => onCreateColumn({ tableId, name: `Field ${columns.length + 1}`, type: "TEXT", order: col.order + 1 })}
           >
             <Icon name="ArrowRight" className="h-4 w-4" /> Insert right
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" disabled={!isFirstCol}>
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2" disabled={!isFirstCol}>
             <Icon name="ArrowLineLeft" className="h-4 w-4" /> Change primary field
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+          <DropdownMenuSeparator className="m-2" />
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2">
             <Icon name="Link" className="h-4 w-4" /> Copy field URL
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2">
             <Icon name="Info" className="h-4 w-4" /> Edit field description
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2">
             <Icon name="Lock" className="h-4 w-4" /> Edit field permissions
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddSort?.(col.id, "asc")}>
+          <DropdownMenuSeparator className="m-2" />
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2" onClick={() => onAddSort?.(col.id, "asc")}>
             <Icon name="SortAscending" className="h-4 w-4" /> Sort A → Z
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddSort?.(col.id, "desc")}>
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2" onClick={() => onAddSort?.(col.id, "desc")}>
             <Icon name="SortDescending" className="h-4 w-4" /> Sort Z → A
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2" onClick={() => onAddFilter?.(col.id)}>
+          <DropdownMenuSeparator className="m-2" />
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2" onClick={() => onAddFilter?.(col.id)}>
             <Icon name="FunnelSimple" className="h-4 w-4" /> Filter by this field
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2">
             <Icon name="Group" className="h-4 w-4" /> Group by this field
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2">
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2">
             <Icon name="GitBranch" className="h-4 w-4" /> Show dependencies
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer gap-3 px-3 py-2 text-gray-400" onClick={() => onHideColumn?.(col.id)}>
+          <DropdownMenuSeparator className="m-2" />
+          <DropdownMenuItem className="cursor-pointer gap-3 p-2 text-gray-400" onClick={() => onHideColumn?.(col.id)}>
             <Icon name="EyeSlash" className="h-4 w-4" /> Hide field
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="cursor-pointer gap-3 px-3 py-2 text-red-500 focus:text-red-500"
+            className="cursor-pointer gap-3 p-2 text-red-500 focus:text-red-500"
             disabled={isFirstCol}
             onClick={() => onDeleteColumn({ id: col.id })}
           >

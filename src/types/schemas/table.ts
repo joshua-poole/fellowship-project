@@ -40,6 +40,7 @@ export const TableGetByIdOutputSchema = TableModelSchema.pick({
         columnId: true,
         operator: true,
         value: true,
+        conjunction: true,
       })),
       sorts: z.array(ViewSortModelSchema.pick({
         id: true,

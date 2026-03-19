@@ -10,6 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import type { ViewsSidebarProps } from "~/types/Props";
 
 export function ViewsSidebar({
@@ -46,7 +51,46 @@ export function ViewsSidebar({
               className="h-8 py-1.5 pl-9 pr-7.5 w-full text-sm outline-none bg-transparent placeholder:text-gray-400 focus:border-red-600"
             />
             <div className="h-4 w-7 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2">
-              <Icon name="Cog" className="h-4 w-4 text-black cursor-pointer transform" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center justify-center cursor-pointer">
+                    <Icon name="Cog" className="h-4 w-4 text-black transform" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="bottom"
+                  align="start"
+                  className="p-0 border-none"
+                  style={{
+                    borderRadius: 8,
+                    boxShadow: "0px 0px 1px rgba(0,0,0,0.24), 0px 0px 2px rgba(0,0,0,0.16), 0px 3px 4px rgba(0,0,0,0.06), 0px 6px 8px rgba(0,0,0,0.06), 0px 12px 16px rgba(0,0,0,0.08), 0px 18px 32px rgba(0,0,0,0.06)",
+                    width: "auto",
+                  }}
+                >
+                  <div className="p-4">
+                    <div className="text-base font-semibold">Options</div>
+                    <div
+                      className="flex items-center mt-4 cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div
+                        className="flex flex-none rounded-full items-center"
+                        style={{
+                          height: 12,
+                          width: 19.2,
+                          padding: 2,
+                          backgroundColor: "var(--colors-foreground-quietest, #d4d4d8)",
+                          justifyContent: "flex-start",
+                        }}
+                      >
+                        <div className="flex-none rounded-full bg-white" style={{ width: 8, height: 8 }} />
+                      </div>
+                      <span className="ml-2 text-xs text-gray-500">Show everyone&apos;s personal views</span>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>
@@ -70,9 +114,26 @@ export function ViewsSidebar({
                 <GridFeatureIcon className="h-4 w-4 shrink-0" style={{ color: "rgb(22, 110, 225)" }} />
                 {renamingViewId === v.id ? (
                   <input
-                    autoFocus
+                    aria-label="Rename view"
+                    type="text"
+                    maxLength={255}
+                    ref={(el) => {
+                      if (el) {
+                        requestAnimationFrame(() => {
+                          el.focus();
+                          el.select();
+                        });
+                      }
+                    }}
                     defaultValue={v.name}
-                    className="flex-1 min-w-0 text-sm outline-none bg-transparent border-2 border-blue-500 rounded px-1 -mx-1"
+                    className="flex-auto min-w-0 text-sm font-semibold leading-[1.25] rounded outline-none"
+                    style={{
+                      height: 24,
+                      padding: "0px 2px",
+                      marginRight: -4,
+                      marginLeft: -4,
+                      boxShadow: "inset 0 0 0 2px var(--colors-border-default)",
+                    }}
                     onBlur={(e) => {
                       const val = e.currentTarget.value.trim();
                       if (val && val !== v.name) onRenameView(v.id, val);
@@ -85,7 +146,13 @@ export function ViewsSidebar({
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
-                  <span className={`truncate text-sm font-medium leading-[1.25]`}>
+                  <span
+                    className={`truncate text-sm font-medium leading-[1.25]`}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setRenamingViewId(v.id);
+                    }}
+                  >
                     {v.name}
                   </span>
                 )}

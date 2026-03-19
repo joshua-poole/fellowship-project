@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import type { EditableCellProps } from "~/types/Props";
 
-// Survives component remounts — stores edited values until server data catches up
-const pendingEdits = new Map<string, string>();
+// Tracks cells with in-flight saves so we don't overwrite with stale server data
+const pendingCells = new Set<string>();
 
 // Module-level active cell position — survives unmount/remount from virtualization
 let activeCell: { rowIndex: number; columnId: string } | null = null;
@@ -55,27 +55,23 @@ export const EditableCell = React.memo(function EditableCell({
 }: EditableCellProps) {
   const cellKey = `${rowId}:${columnId}`;
 
-  const [value, setValue] = useState(
-    () => pendingEdits.get(cellKey) ?? initialValue,
-  );
+  const [value, setValue] = useState(() => initialValue);
   const [focused, setFocused] = useState(false);
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wasFocusedRef = useRef(false);
 
-  // Sync value from pending edits or server data when not focused
+  // Sync from server/optimistic data when not focused and no pending save
   useEffect(() => {
-    if (!focused) {
-      const pending = pendingEdits.get(cellKey);
-      setValue(pending ?? initialValue);
+    if (!focused && !pendingCells.has(cellKey)) {
+      setValue(initialValue);
     }
   }, [initialValue, focused, cellKey]);
 
-  // Clear pending edit when server data catches up
+  // Clear pending flag when server data catches up
   useEffect(() => {
-    const pending = pendingEdits.get(cellKey);
-    if (pending !== undefined && initialValue === pending) {
-      pendingEdits.delete(cellKey);
+    if (pendingCells.has(cellKey)) {
+      pendingCells.delete(cellKey);
     }
   }, [initialValue, cellKey]);
 
@@ -96,7 +92,7 @@ export const EditableCell = React.memo(function EditableCell({
 
   const save = () => {
     if (value !== initialValue) {
-      pendingEdits.set(cellKey, value);
+      pendingCells.add(cellKey);
       const coerced = columnType === "NUMBER" && value !== "" ? Number(value) : value;
       onSaveCell(rowId, columnId, coerced);
     }
@@ -133,20 +129,20 @@ export const EditableCell = React.memo(function EditableCell({
       return false;
     }
 
-    // Try direct DOM focus first (target is likely within overscan)
+    // Use the virtualizer for scrolling (avoids the two-step jump where
+    // the focus border moves before the page scrolls).
+    onNavigateToCell(targetIndex, columnId);
+
+    // If the target is already rendered (within overscan), focus it
+    // directly — the layout-effect path only fires on mount.
     const container = row.parentElement;
     if (container) {
       const targetRow = container.querySelector<HTMLElement>(`[data-index="${targetIndex}"]`);
       const nextInput = targetRow?.querySelector<HTMLInputElement>(`input[data-col-id="${columnId}"]`);
-      if (nextInput && targetRow) {
+      if (nextInput) {
         nextInput.focus({ preventScroll: true });
-        targetRow.scrollIntoView({ block: "nearest" });
-        return true;
       }
     }
-
-    // Target not in DOM — set activeCell and scroll
-    onNavigateToCell(targetIndex, columnId);
     return true;
   };
 
@@ -205,7 +201,12 @@ export const EditableCell = React.memo(function EditableCell({
     }
   };
 
-  const isSearchMatch = !focused && !!search && !!value && value.toLowerCase().includes(search.toLowerCase());
+  // Format numbers with .0 when not editing
+  const displayValue = (!editing && columnType === "NUMBER" && value !== "" && !isNaN(Number(value)) && !value.includes("."))
+    ? value + ".0"
+    : value;
+
+  const isSearchMatch = !focused && !!search && !!displayValue && displayValue.toLowerCase().includes(search.toLowerCase());
 
   const cellBg = isFiltered ? "#ebfbec" : isSorted ? "#fff2ea" : undefined;
 
@@ -239,21 +240,21 @@ export const EditableCell = React.memo(function EditableCell({
           }}
         />
       )}
-      {!focused && search && value ? (
-        <div className="absolute inset-0 flex items-center px-1.5 pointer-events-none truncate text-sm">
+      {!focused && search && displayValue ? (
+        <div className={`absolute inset-0 flex items-center px-1.5 pointer-events-none truncate text-sm ${columnType === "NUMBER" ? "justify-end" : ""}`}>
           <span className="truncate">
-            <HighlightedText text={value} search={search} />
+            <HighlightedText text={displayValue} search={search} />
           </span>
         </div>
       ) : null}
       <input
         ref={inputRef}
         data-col-id={columnId}
-        className={`relative w-full bg-transparent outline-none truncate ${isFirstCol && focused ? "text-[rgb(22,110,225)]" : ""} ${!focused && search && value ? "text-transparent" : ""}`}
+        className={`relative w-full bg-transparent outline-none truncate ${isFirstCol && focused ? "text-[rgb(22,110,225)]" : ""} ${!focused && search && displayValue ? "text-transparent" : ""} ${columnType === "NUMBER" ? "text-right" : ""}`}
         style={focused && !editing ? { caretColor: "transparent" } : undefined}
         readOnly={!editing}
         inputMode={columnType === "NUMBER" ? "decimal" : "text"}
-        value={value}
+        value={editing ? value : displayValue}
         onChange={(e) => {
           if (!editing) return;
           const v = e.target.value;

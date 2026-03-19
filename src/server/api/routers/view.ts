@@ -22,7 +22,7 @@ const viewSelect = {
   order: true,
   search: true,
   filters: {
-    select: { id: true, columnId: true, operator: true, value: true },
+    select: { id: true, columnId: true, operator: true, value: true, conjunction: true },
   },
   sorts: {
     select: { id: true, columnId: true, direction: true, order: true },
@@ -113,6 +113,7 @@ export const viewRouter = createTRPCRouter({
               columnId: f.columnId,
               operator: f.operator,
               value: f.value ?? null,
+              conjunction: f.conjunction ?? null,
             })),
           });
         }
