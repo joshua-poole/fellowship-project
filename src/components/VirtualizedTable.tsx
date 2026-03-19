@@ -272,7 +272,7 @@ export function VirtualizedTable({ tableId, columns, rowCount, search, searchMat
 
   return (
     <TableVirtualizerContext.Provider value={virtualizerContextValue}>
-    <div className="flex flex-col justify-between h-full w-full bg-[#f6f8fc] relative after:content-[''] after:absolute after:top-0 after:bottom-0 after:left-[83px] after:w-px after:bg-[#ccc] after:z-3 after:pointer-events-none">
+    <div className="flex flex-col justify-between h-full w-full bg-[#f6f8fc] relative after:content-[''] after:absolute after:top-0 after:bottom-0 after:left-20.75 after:w-px after:bg-[#ccc] after:z-3 after:pointer-events-none">
       {/* Dynamic style for column selection — avoids React re-renders */}
       <style ref={colSelectionStyleRef} />
       <div

@@ -72,6 +72,7 @@ export function useViewMutations(
                   columnId: f.columnId,
                   operator: f.operator,
                   value: f.value ?? null,
+                  conjunction: f.conjunction ?? null,
                 })),
               }),
               ...(input.sorts !== undefined && {

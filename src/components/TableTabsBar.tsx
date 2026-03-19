@@ -132,7 +132,7 @@ function TableListPopover({
   onCreateTable,
 }: {
   tables: TableTabsBarProps["tables"];
-  activeTableId: string;
+  activeTableId: string | undefined;
   onSelectTable: (id: string) => void;
   onCreateTable: () => void;
 }) {
